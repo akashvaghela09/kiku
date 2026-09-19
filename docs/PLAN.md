@@ -88,9 +88,14 @@ keystroke fails, so a failure cannot leave Ctrl stuck down across the desktop ·
 whitespace is normalised (newlines included, which would otherwise submit a form),
 punctuation and capitalisation are left to the model.
 
-## Chunk 8 — Audio feedback · `TODO`
-Synthesised tones for hotkey-armed / listening / done / error · volume · mute ·
-non-blocking playback.
+## Chunk 8 — Audio feedback · `DONE`
+Three cues synthesised in code — no audio files, so no licence to carry and no bytes
+in the bundle · a rising blip to start, falling to finish, low double to discard ·
+phase-accumulated rather than evaluated per sample, and faded at both ends, because
+either mistake produces an audible click on every playback · tests assert the waveform
+is continuous and starts and ends at silence, which is what a click actually is · each
+cue opens an output stream and closes it rather than holding the audio device open for
+the whole session · a cue that cannot play is logged, never surfaced.
 
 ## Chunk 9 — History · `TODO`
 SQLite with a migration runner from day one · FTS5 search · list UI · copy · delete

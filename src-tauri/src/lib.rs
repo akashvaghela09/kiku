@@ -11,6 +11,7 @@ pub mod error;
 pub mod hotkeys;
 pub mod models;
 pub mod output;
+pub mod sound;
 pub mod state;
 
 mod ipc;
@@ -45,6 +46,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
             ipc::set_microphone,
             ipc::preferences,
             ipc::set_preferences,
+            ipc::preview_sound,
         ])
         .events(collect_events![
             ipc::DownloadProgressed,

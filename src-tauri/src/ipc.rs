@@ -16,6 +16,7 @@ use crate::dictation::{DictationState, Discarded};
 use crate::error::{CommandResult, Error};
 use crate::hotkeys::{Hotkey, HotkeyBindings};
 use crate::models::{self, DownloadProgress, InstallState};
+use crate::sound::{self, Cue};
 use crate::state::{AppState, Preferences};
 
 // ---------------------------------------------------------------- application
@@ -188,6 +189,33 @@ pub fn preferences(state: State<'_, AppState>) -> CommandResult<Preferences> {
 #[specta::specta]
 pub fn set_preferences(state: State<'_, AppState>, preferences: Preferences) -> CommandResult<()> {
     state.set_preferences(preferences);
+    Ok(())
+}
+
+// --------------------------------------------------------------------- sounds
+
+/// Which feedback cue to preview from Settings.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum SoundCue {
+    Start,
+    Stop,
+    Error,
+}
+
+/// Play a cue so the user can hear it while adjusting the setting.
+///
+/// Deliberately ignores the sounds preference: previewing is the one place a user
+/// wants to hear a cue they have currently switched off.
+#[tauri::command]
+#[specta::specta]
+pub fn preview_sound(cue: SoundCue) -> CommandResult<()> {
+    let cue = match cue {
+        SoundCue::Start => Cue::Start,
+        SoundCue::Stop => Cue::Stop,
+        SoundCue::Error => Cue::Error,
+    };
+    sound::play(cue, true);
     Ok(())
 }
 

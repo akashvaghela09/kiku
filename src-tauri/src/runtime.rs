@@ -12,6 +12,7 @@ use crate::dictation::{DictationState, Outcome};
 use crate::hotkeys::{HotkeyAction, HotkeyBindings, Interpreter};
 use crate::ipc::{DictationDiscarded, DictationStateChanged, LevelMeasured, TranscriptProduced};
 use crate::output::{self, Delivery};
+use crate::sound::{self, Cue};
 use crate::state::AppState;
 
 /// Register the dictation hotkeys and route their events into a session.
@@ -76,6 +77,7 @@ fn start(app: &AppHandle) {
 
     match result {
         Ok(()) => {
+            sound::play(Cue::Start, state.preferences().sounds);
             show_overlay(app);
             publish_state(app, DictationState::Listening);
         }
@@ -107,6 +109,7 @@ fn stop(app: &AppHandle) {
             }
             Ok(Outcome::Discarded(reason)) => {
                 tracing::debug!(?reason, "dictation produced no text");
+                sound::play(Cue::Error, state.preferences().sounds);
                 let _ = DictationDiscarded(reason).emit(&app);
             }
             Err(error) => {
@@ -128,6 +131,10 @@ fn stop(app: &AppHandle) {
 fn deliver(app: &AppHandle, transcript: crate::asr::Transcript) {
     let state = app.state::<AppState>();
     let preferences = state.preferences();
+
+    // Sound the end of the gesture before pasting, so the cue lands while the user is
+    // still expecting feedback rather than after the text has already appeared.
+    sound::play(Cue::Stop, preferences.sounds);
     let text = output::prepare(&transcript.text, preferences.trailing_space);
 
     match output::deliver(app, &text, preferences.auto_paste) {
