@@ -146,9 +146,41 @@ fn deliver(app: &AppHandle, transcript: crate::asr::Transcript) {
         }
     }
 
+    record(app, &transcript);
+
     // The event carries the model's text, not the whitespace-adjusted copy: history
     // should record what was said, not how it was spliced into another application.
     let _ = TranscriptProduced(transcript).emit(app);
+}
+
+/// Save a transcript to history, unless the user has paused recording.
+///
+/// A history failure is logged and nothing else: the text has already reached the
+/// user, and losing the record of a dictation must never look like losing the
+/// dictation itself.
+fn record(app: &AppHandle, transcript: &crate::asr::Transcript) {
+    let state = app.state::<AppState>();
+    if state.preferences().history_paused {
+        return;
+    }
+
+    let model_id = match state.asr.status() {
+        crate::asr::EngineStatus::Ready(model) => Some(model),
+        _ => None,
+    };
+
+    let saved = state.history().and_then(|history| {
+        history.insert(
+            &transcript.text,
+            transcript.audio_ms,
+            transcript.decode_ms,
+            model_id.as_deref(),
+        )
+    });
+
+    if let Err(error) = saved {
+        tracing::error!(%error, "could not save the dictation to history");
+    }
 }
 
 fn publish_state<R: Runtime>(app: &AppHandle<R>, state: DictationState) {

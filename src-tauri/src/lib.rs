@@ -8,6 +8,7 @@ pub mod asr;
 pub mod audio;
 pub mod dictation;
 pub mod error;
+pub mod history;
 pub mod hotkeys;
 pub mod models;
 pub mod output;
@@ -47,6 +48,10 @@ fn specta_builder() -> Builder<tauri::Wry> {
             ipc::preferences,
             ipc::set_preferences,
             ipc::preview_sound,
+            ipc::list_history,
+            ipc::delete_history_entry,
+            ipc::clear_history,
+            ipc::purge_history,
         ])
         .events(collect_events![
             ipc::DownloadProgressed,

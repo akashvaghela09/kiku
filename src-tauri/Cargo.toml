@@ -41,6 +41,7 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 futures-util = { version = "0.3", default-features = false }
 tokio = { version = "1", features = ["fs", "io-util"] }
 enigo = "0.6"
+rusqlite = { version = "0.40", features = ["bundled"] }
 
 [features]
 # Type generation runs as a test so it cannot end up in a release binary.

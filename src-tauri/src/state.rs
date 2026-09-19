@@ -12,6 +12,8 @@ use specta::Type;
 
 use crate::asr::AsrService;
 use crate::dictation::Dictation;
+use crate::error::{Error, Result};
+use crate::history::History;
 use crate::hotkeys::HotkeyBindings;
 use crate::models::ModelStore;
 
@@ -28,6 +30,10 @@ pub struct Preferences {
     pub trailing_space: bool,
     /// Play the short tones that mark listening starting and finishing.
     pub sounds: bool,
+    /// Stop recording dictations to history. The existing history is left alone.
+    pub history_paused: bool,
+    /// Delete history entries older than this many days. `None` keeps everything.
+    pub retention_days: Option<u32>,
 }
 
 impl Default for Preferences {
@@ -36,6 +42,8 @@ impl Default for Preferences {
             auto_paste: true,
             trailing_space: true,
             sounds: true,
+            history_paused: false,
+            retention_days: None,
         }
     }
 }
@@ -50,10 +58,21 @@ pub struct AppState {
     /// Device id of the chosen microphone; `None` means follow the system default.
     microphone: Mutex<Option<String>>,
     preferences: Mutex<Preferences>,
+    /// `None` when the database could not be opened. Dictation still works without
+    /// history — refusing to launch over a history problem would be the worse failure.
+    history: Option<History>,
 }
 
 impl AppState {
     pub fn new(data_dir: PathBuf) -> Self {
+        let history = match History::open(&data_dir.join("history.sqlite3")) {
+            Ok(history) => Some(history),
+            Err(error) => {
+                tracing::error!(%error, "history is unavailable; dictation will still work");
+                None
+            }
+        };
+
         Self {
             models: ModelStore::new(&data_dir),
             asr: AsrService::new(),
@@ -62,7 +81,14 @@ impl AppState {
             data_dir,
             microphone: Mutex::new(None),
             preferences: Mutex::new(Preferences::default()),
+            history,
         }
+    }
+
+    pub fn history(&self) -> Result<&History> {
+        self.history
+            .as_ref()
+            .ok_or_else(|| Error::Database("The history database could not be opened.".into()))
     }
 
     pub fn preferences(&self) -> Preferences {

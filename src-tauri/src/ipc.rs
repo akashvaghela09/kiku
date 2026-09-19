@@ -14,6 +14,7 @@ use crate::audio::Level;
 use crate::audio::{self, MicrophoneInfo};
 use crate::dictation::{DictationState, Discarded};
 use crate::error::{CommandResult, Error};
+use crate::history::Page;
 use crate::hotkeys::{Hotkey, HotkeyBindings};
 use crate::models::{self, DownloadProgress, InstallState};
 use crate::sound::{self, Cue};
@@ -190,6 +191,41 @@ pub fn preferences(state: State<'_, AppState>) -> CommandResult<Preferences> {
 pub fn set_preferences(state: State<'_, AppState>, preferences: Preferences) -> CommandResult<()> {
     state.set_preferences(preferences);
     Ok(())
+}
+
+// -------------------------------------------------------------------- history
+
+/// A page of past dictations, newest first, optionally filtered by a search.
+#[tauri::command]
+#[specta::specta]
+pub fn list_history(
+    state: State<'_, AppState>,
+    query: Option<String>,
+    limit: u32,
+    offset: u32,
+) -> CommandResult<Page> {
+    Ok(state.history()?.list(query.as_deref(), limit, offset)?)
+}
+
+/// Delete one entry.
+#[tauri::command]
+#[specta::specta]
+pub fn delete_history_entry(state: State<'_, AppState>, id: f64) -> CommandResult<bool> {
+    Ok(state.history()?.delete(id as i64)?)
+}
+
+/// Delete every entry. Returns how many went.
+#[tauri::command]
+#[specta::specta]
+pub fn clear_history(state: State<'_, AppState>) -> CommandResult<u32> {
+    Ok(state.history()?.clear()?)
+}
+
+/// Delete entries older than `days`. Returns how many went.
+#[tauri::command]
+#[specta::specta]
+pub fn purge_history(state: State<'_, AppState>, days: u32) -> CommandResult<u32> {
+    Ok(state.history()?.purge_older_than(days)?)
 }
 
 // --------------------------------------------------------------------- sounds

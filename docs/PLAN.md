@@ -97,9 +97,14 @@ is continuous and starts and ends at silence, which is what a click actually is 
 cue opens an output stream and closes it rather than holding the audio device open for
 the whole session · a cue that cannot play is logged, never surfaced.
 
-## Chunk 9 — History · `TODO`
-SQLite with a migration runner from day one · FTS5 search · list UI · copy · delete
-one/all · pause toggle · optional auto-purge.
+## Chunk 9 — History · `DONE`
+SQLite with a migration runner present from the first release, which is the only way
+"survives updates" can actually hold · FTS5 search over external content, so a deleted
+transcript cannot survive in the search index · user input is sanitised into FTS5
+syntax, since a search box containing a quote or `AND` would otherwise be a syntax
+error · pause recording, delete one, delete all, and an age-based purge · a history
+that fails to open is logged and dictation continues, because refusing to launch over
+a history problem is the worse failure. UI lands in chunk 10.
 
 ## Chunk 10 — Settings + onboarding · `TODO`
 First-run: welcome → model choice → download → permissions → first dictation.
