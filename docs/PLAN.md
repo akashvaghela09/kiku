@@ -78,9 +78,15 @@ Transparent, always-on-top, click-through, non-activating window · idle → lis
 processing → done → error · amplitude-driven waveform · multi-monitor placement ·
 reduced-motion support.
 
-## Chunk 7 — Output · `TODO`
-Clipboard write · per-OS synthesised paste · detect blocked paste and fall back to a
-toast · trailing-whitespace and punctuation normalisation.
+## Chunk 7 — Output · `DONE`
+Clipboard write is unconditional; the paste is synthesised on top of it, so a refused
+paste still leaves the text somewhere reachable · every modifier is released first,
+because hold-to-talk fires on key release and a user commonly lifts the space bar
+before Alt — without this, Ctrl+V would really be Ctrl+Alt+V · a settle delay covers
+X11's clipboard ownership handshake · the paste modifier is released even when the
+keystroke fails, so a failure cannot leave Ctrl stuck down across the desktop ·
+whitespace is normalised (newlines included, which would otherwise submit a form),
+punctuation and capitalisation are left to the model.
 
 ## Chunk 8 — Audio feedback · `TODO`
 Synthesised tones for hotkey-armed / listening / done / error · volume · mute ·

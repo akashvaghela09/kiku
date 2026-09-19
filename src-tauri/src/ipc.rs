@@ -16,7 +16,7 @@ use crate::dictation::{DictationState, Discarded};
 use crate::error::{CommandResult, Error};
 use crate::hotkeys::{Hotkey, HotkeyBindings};
 use crate::models::{self, DownloadProgress, InstallState};
-use crate::state::AppState;
+use crate::state::{AppState, Preferences};
 
 // ---------------------------------------------------------------- application
 
@@ -172,6 +172,22 @@ pub fn cancel_dictation(state: State<'_, AppState>) -> CommandResult<()> {
 #[specta::specta]
 pub fn set_microphone(state: State<'_, AppState>, device_id: Option<String>) -> CommandResult<()> {
     state.set_microphone(device_id);
+    Ok(())
+}
+
+// ---------------------------------------------------------------- preferences
+
+/// How transcripts are delivered and whether sounds play.
+#[tauri::command]
+#[specta::specta]
+pub fn preferences(state: State<'_, AppState>) -> CommandResult<Preferences> {
+    Ok(state.preferences())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn set_preferences(state: State<'_, AppState>, preferences: Preferences) -> CommandResult<()> {
+    state.set_preferences(preferences);
     Ok(())
 }
 

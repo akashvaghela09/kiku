@@ -40,6 +40,7 @@ sha2 = "0.10"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream", "http2"] }
 futures-util = { version = "0.3", default-features = false }
 tokio = { version = "1", features = ["fs", "io-util"] }
+enigo = "0.6"
 
 [features]
 # Type generation runs as a test so it cannot end up in a release binary.

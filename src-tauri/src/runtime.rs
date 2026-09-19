@@ -11,6 +11,7 @@ use tauri_specta::Event;
 use crate::dictation::{DictationState, Outcome};
 use crate::hotkeys::{HotkeyAction, HotkeyBindings, Interpreter};
 use crate::ipc::{DictationDiscarded, DictationStateChanged, LevelMeasured, TranscriptProduced};
+use crate::output::{self, Delivery};
 use crate::state::AppState;
 
 /// Register the dictation hotkeys and route their events into a session.
@@ -102,7 +103,7 @@ fn stop(app: &AppHandle) {
 
         match state.dictation.stop(&state.asr) {
             Ok(Outcome::Transcribed(transcript)) => {
-                let _ = TranscriptProduced(*transcript).emit(&app);
+                deliver(&app, *transcript);
             }
             Ok(Outcome::Discarded(reason)) => {
                 tracing::debug!(?reason, "dictation produced no text");
@@ -117,6 +118,30 @@ fn stop(app: &AppHandle) {
         publish_state(&app, DictationState::Idle);
         hide_overlay(&app);
     });
+}
+
+/// Put the transcript where the user is typing, then tell the UI what happened.
+///
+/// The clipboard copy is unconditional, so even a refused paste leaves the text
+/// somewhere reachable — which is why a delivery failure is reported rather than
+/// treated as a lost dictation.
+fn deliver(app: &AppHandle, transcript: crate::asr::Transcript) {
+    let state = app.state::<AppState>();
+    let preferences = state.preferences();
+    let text = output::prepare(&transcript.text, preferences.trailing_space);
+
+    match output::deliver(app, &text, preferences.auto_paste) {
+        Ok(Delivery::Pasted) => tracing::debug!("transcript pasted"),
+        Ok(Delivery::CopiedOnly) => tracing::info!("transcript copied but not pasted"),
+        Err(error) => {
+            tracing::error!(%error, "could not deliver the transcript");
+            let _ = app.emit("dictation-error", error.to_string());
+        }
+    }
+
+    // The event carries the model's text, not the whitespace-adjusted copy: history
+    // should record what was said, not how it was spliced into another application.
+    let _ = TranscriptProduced(transcript).emit(app);
 }
 
 fn publish_state<R: Runtime>(app: &AppHandle<R>, state: DictationState) {
