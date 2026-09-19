@@ -1,0 +1,22 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capabilities for Kiku's application windows.",
+  "windows": ["main", "overlay"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-set-position",
+    "core:window:allow-set-size",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-set-ignore-cursor-events",
+    "core:window:allow-current-monitor",
+    "core:window:allow-available-monitors",
+    "core:webview:allow-webview-position",
+    "clipboard-manager:allow-write-text",
+    "clipboard-manager:allow-read-text",
+    "global-shortcut:default",
+    "opener:allow-open-url"
+  ]
+}

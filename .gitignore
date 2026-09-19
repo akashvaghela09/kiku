@@ -1,0 +1,9 @@
+node_modules/
+dist/
+target/
+*.local
+.DS_Store
+.vite/
+
+# Generated from the Rust command signatures by tauri-specta; never hand-edited.
+src/lib/ipc/bindings.ts

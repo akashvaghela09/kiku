@@ -1,0 +1,77 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Kiku",
+  "version": "0.1.0",
+  "identifier": "io.github.akashvaghela09.kiku",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: asset: http://asset.localhost"
+    },
+    "windows": [
+      {
+        "label": "main",
+        "title": "Kiku",
+        "url": "index.html",
+        "width": 880,
+        "height": 640,
+        "minWidth": 640,
+        "minHeight": 480,
+        "center": true,
+        "resizable": true,
+        "visible": false,
+        "dragDropEnabled": false
+      },
+      {
+        "label": "overlay",
+        "url": "overlay.html",
+        "width": 320,
+        "height": 96,
+        "transparent": true,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "resizable": false,
+        "shadow": false,
+        "focus": false,
+        "visible": false,
+        "acceptFirstMouse": false,
+        "dragDropEnabled": false
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["deb", "appimage", "nsis", "dmg"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Utility",
+    "shortDescription": "Offline dictation",
+    "longDescription": "Hold a key, speak, and the text appears where you're typing. Speech recognition runs entirely on your own machine — no account, no cloud, no telemetry.",
+    "copyright": "Speech recognition by NVIDIA Parakeet (CC-BY-4.0)",
+    "linux": {
+      "deb": {
+        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0", "libasound2"]
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
+  }
+}

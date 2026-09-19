@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Kiku overlay</title>
+    <style>
+      /* The window itself is transparent; only the capsule paints. Set here rather
+         than in a stylesheet so there is no flash of an opaque background. */
+      html,
+      body {
+        background: transparent !important;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/windows/overlay/entry.tsx"></script>
+  </body>
+</html>

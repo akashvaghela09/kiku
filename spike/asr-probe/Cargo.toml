@@ -10,7 +10,7 @@ anyhow = "1"
 clap = { version = "4", features = ["derive"] }
 cpal = "0.15"
 hound = "3.5"
-sherpa-rs = { version = "0.6.8", default-features = false, features = ["download-binaries", "static"] }
+sherpa-rs = { version = "0.6.8", default-features = false, features = ["download-binaries"] }
 
 [profile.release]
 opt-level = 3

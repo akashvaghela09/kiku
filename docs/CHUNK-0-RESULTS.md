@@ -59,12 +59,23 @@ the waveform.
 3. **`feature_dim` is 128**, not the more common 80, and `model_type` must be
    `nemo_transducer`. The generic `transducer` default mishandles Parakeet's TDT
    duration outputs.
-4. **Linking.** `download-binaries` produces `libsherpa-onnx-c-api.so` /
-   `libsherpa-onnx-cxx-api.so` which are *not* on the runtime path — the binary fails
-   to start without `LD_LIBRARY_PATH`. Kiku must either link statically or bundle the
-   libraries with an `$ORIGIN` rpath. Static linking on Linux additionally requires
-   `RUSTFLAGS="-C relocation-model=dynamic-no-pic"`, which disables PIE and therefore
-   executable ASLR — a trade-off to decide in chunk 12.
+4. **Linking: the libraries must be bundled, not statically linked.**
+   `download-binaries` produces `libsherpa-onnx-c-api.so` / `libsherpa-onnx-cxx-api.so`
+   which are *not* on the runtime path — the binary fails to start without
+   `LD_LIBRARY_PATH`. Enabling the `static` feature does not fix this: it demands
+   `RUSTFLAGS="-C relocation-model=dynamic-no-pic"` (disabling PIE, and with it
+   executable ASLR) and then still fails to link, because the prebuilt download ships
+   shared objects only:
+
+   ```
+   rust-lld: error: undefined symbol: SherpaOnnxCreateOfflineRecognizer
+   ```
+
+   Static linking would therefore mean building sherpa-onnx from source in CI on all
+   three platforms. **Decision for chunk 12: ship the shared libraries alongside the
+   binary with an `$ORIGIN` rpath** (`@loader_path` on macOS), which is the ordinary
+   Tauri approach for native dependencies and avoids both the source build and the
+   ASLR trade-off.
 5. **Microphone input clips.** The default device (44.1 kHz, 2 ch) produced a peak of
    1.015 — above full scale. Chunk 2 must clamp, and should surface a clipping warning
    rather than silently distorting the audio the recogniser sees.

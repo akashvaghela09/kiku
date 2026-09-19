@@ -1,0 +1,144 @@
+/**
+ * Kiku design tokens.
+ *
+ * Every colour, radius, shadow and motion value in the app resolves through a
+ * custom property declared here. Components must never contain a literal hex
+ * value — that is what makes light/dark a one-file concern.
+ *
+ * Theming is driven solely by `data-theme` on <html>, written by an inline script
+ * in each entry document before first paint. There is therefore exactly one dark
+ * block rather than a duplicate inside a `prefers-color-scheme` media query.
+ */
+
+:root {
+  /* ---- fixed brand: sampled from the app mark, never re-derived ---- */
+  --brand-cyan: #22a7cc;
+  --brand-teal: #2a94b2;
+
+  /* ---- surfaces ---- */
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-sunken: #f6f8fa;
+  --surface-hover: #f6f8fa;
+  --surface-active: #edf1f4;
+  --surface-selected: #edfafe;
+  --surface-scrim: rgb(16 21 26 / 0.4);
+
+  /* ---- borders ---- */
+  --border: #dde4e9;
+  --border-strong: #c3cdd5;
+  --border-subtle: #edf1f4;
+  --border-accent: #a5e6f8;
+
+  /* ---- text ---- */
+  --text-primary: #191f25;
+  --text-secondary: #53616c;
+  --text-muted: #64727e;
+  --text-disabled: #94a3ae;
+  --text-on-accent: #ffffff;
+  --text-accent: #17738f;
+
+  /* ---- interactive accent ---- */
+  --accent: #17738f;
+  --accent-hover: #1c8faf;
+  --accent-active: #185e74;
+  --accent-graphic: #22a7cc;
+  --accent-wash: #edfafe;
+
+  /* ---- status ---- */
+  --success: #0f7a55;
+  --success-wash: #e6f7f0;
+  --warning: #9a5b00;
+  --warning-wash: #fdf3e2;
+  --danger: #b4291b;
+  --danger-hover: #8f2015;
+  --danger-wash: #fdecea;
+
+  /* ---- focus ---- */
+  --ring: #1c8faf;
+  --ring-offset: var(--surface);
+
+  /* ---- elevation: static, never animated ---- */
+  --shadow-sm: 0 1px 2px rgb(16 21 26 / 0.06);
+  --shadow-md:
+    0 2px 8px rgb(16 21 26 / 0.08), 0 1px 2px rgb(16 21 26 / 0.06);
+  --shadow-lg:
+    0 8px 24px rgb(16 21 26 / 0.12), 0 2px 6px rgb(16 21 26 / 0.08);
+
+  /* ---- radii ---- */
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 8px;
+  --r-xl: 12px;
+  --r-pill: 9999px;
+
+  /* ---- motion ---- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.32, 0.64, 1);
+  --dur-instant: 90ms;
+  --dur-fast: 140ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+}
+
+:root[data-theme='dark'] {
+  --surface: #14191e;
+  --surface-raised: #191f25;
+  --surface-sunken: #10151a;
+  --surface-hover: #1e252c;
+  --surface-active: #222a31;
+  --surface-selected: #0d3140;
+  --surface-scrim: rgb(10 14 18 / 0.56);
+
+  --border: #2b343c;
+  --border-strong: #3f4b55;
+  --border-subtle: #222a31;
+  --border-accent: #184e60;
+
+  --text-primary: #e6edf3;
+  --text-secondary: #a3b1bc;
+  --text-muted: #7a8894;
+  --text-disabled: #53616c;
+  --text-on-accent: #08191f;
+  --text-accent: #38bde0;
+
+  --accent: #38bde0;
+  --accent-hover: #6bd3ef;
+  --accent-active: #22a7cc;
+  --accent-graphic: #38bde0;
+  --accent-wash: #0d3140;
+
+  --success: #3ddc97;
+  --success-wash: #08281d;
+  --warning: #f5b547;
+  --warning-wash: #2e1f06;
+  --danger: #ff7a6b;
+  --danger-hover: #ff9a8e;
+  --danger-wash: #2e110d;
+
+  --ring: #38bde0;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 2px 8px rgb(0 0 0 / 0.44), 0 1px 2px rgb(0 0 0 / 0.36);
+  --shadow-lg: 0 8px 24px rgb(0 0 0 / 0.52), 0 2px 6px rgb(0 0 0 / 0.4);
+}
+
+/**
+ * Overlay palette — deliberately theme-independent.
+ *
+ * The overlay floats over an arbitrary application, not over a Kiku window. Matching
+ * the OS theme would be a promise about a surface we do not own, so the capsule is
+ * always dark and its bar colour is chosen to read against light and dark backdrops
+ * alike.
+ */
+:root {
+  --ov-bg: rgb(16 21 26 / 0.94);
+  --ov-hairline: rgb(255 255 255 / 0.1);
+  --ov-bar: #38bde0;
+  --ov-bar-idle: rgb(56 189 224 / 0.45);
+  --ov-text: #e6edf3;
+  --ov-danger: #ff7a6b;
+  --ov-success: #3ddc97;
+  --ov-shadow: 0 8px 28px rgb(0 0 0 / 0.38);
+}
