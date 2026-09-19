@@ -44,9 +44,14 @@ with clipping detection, computed in the audio callback to drive the overlay wav
 10-minute recording ceiling · capture runs on its own thread because `cpal::Stream` is
 not `Send`, and device-open failures surface at `start()` rather than at `stop()`.
 
-## Chunk 3 — Engine layer · `TODO`
-`Engine` trait over transducer *and* CTC models · sherpa-onnx implementation · model
-load/unload · keep-warm strategy · thread budget · typed errors.
+## Chunk 3 — Engine layer · `DONE`
+`Engine` trait with one implementation (Parakeet via sherpa-onnx) · a single warm
+engine for the process lifetime, since loading costs ~4 s against a sub-second
+dictation budget · four-state status so the UI can say "still getting ready" rather
+than appearing to ignore a hotkey · decode capped at 4 threads, where chunk 0's
+measurements showed returns flatten, leaving cores for the waveform · integration test
+runs the real model and asserts both the text and the real-time factor, skipping
+itself when no model is installed.
 
 ## Chunk 4 — Model management · `TODO`
 Two-model registry with pinned revisions · resumable download with progress ·

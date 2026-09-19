@@ -4,6 +4,7 @@
 //! captured" touches one directory instead of being spread across `services/`,
 //! `utils/` and `helpers/`.
 
+pub mod asr;
 pub mod audio;
 pub mod error;
 mod ipc;
