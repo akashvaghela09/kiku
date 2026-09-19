@@ -1,0 +1,98 @@
+# Kiku — Build Plan
+
+Built in sequential chunks. Each chunk ends in something runnable and verifiable.
+Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`
+
+---
+
+## Chunk 0 — Engine spike (gate) · `WIP`
+
+A throwaway headless Rust CLI proving the engine before any app exists.
+
+- [ ] `spike/asr-probe` Cargo project: `sherpa-rs`, `cpal`, `hound`, `anyhow`, `clap`
+- [ ] Download + pin the 0.6B v2 int8 model, verify checksums
+- [ ] `probe file <wav>` — transcribe a WAV, print text + wall-clock + RTF
+- [ ] `probe mic -s N` — record N seconds at 16 kHz mono, transcribe, print
+- [ ] `probe bench` — RTF across clip lengths (2s / 5s / 15s / 60s)
+- [ ] Verify the 110M CTC model loads through the same code path
+- [ ] **Owner gate: transcribe Akash's own voice and judge the accuracy**
+
+**Answers:** do the ONNX exports work with the Rust bindings; is CPU fast enough; is
+accuracy acceptable on the owner's voice. A failure here reopens the Whisper decision.
+
+**Findings so far:** `sherpa-rs` v0.6.8, actively maintained. Official exports exist:
+- default `csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8` @ `1ab93235…` (631 MB, transducer)
+- small `csukuangfj/sherpa-onnx-nemo-parakeet_tdt_ctc_110m-en-36000` @ `3af92f15…` (437 MB, CTC)
+
+The two models are **different architectures** (transducer vs CTC), so the engine layer
+must abstract over both. The official int8 110M repos are empty placeholders; the small
+model is therefore the 437 MB non-int8 CTC build, not the ~200 MB originally assumed.
+
+---
+
+## Chunk 1 — Skeleton · `TODO`
+Tauri 2 + React/TS/Tailwind/Lucide scaffold · domain-module layout · `tauri-specta`
+typed IPC · icon pipeline from the brand master · strict TS · clippy/rustfmt/ESLint ·
+CI building all three targets.
+
+## Chunk 2 — Audio capture · `TODO`
+`cpal` device enumeration · capture → 16 kHz mono f32 · resampling · ring buffer ·
+max-duration cap · RMS level metering for the waveform · device hot-swap handling.
+
+## Chunk 3 — Engine layer · `TODO`
+`Engine` trait over transducer *and* CTC models · sherpa-onnx implementation · model
+load/unload · keep-warm strategy · thread budget · typed errors.
+
+## Chunk 4 — Model management · `TODO`
+Two-model registry with pinned revisions · resumable download with progress ·
+SHA-256 verification · app-data storage · switch, delete, repair.
+
+## Chunk 5 — Global hotkeys · `TODO`
+Press/release with key-repeat debounce · toggle mode · registration conflict detection
+with actionable errors · rebinding with a capture UI · per-OS quirks.
+
+## Chunk 6 — Overlay · `TODO`
+Transparent, always-on-top, click-through, non-activating window · idle → listening →
+processing → done → error · amplitude-driven waveform · multi-monitor placement ·
+reduced-motion support.
+
+## Chunk 7 — Output · `TODO`
+Clipboard write · per-OS synthesised paste · detect blocked paste and fall back to a
+toast · trailing-whitespace and punctuation normalisation.
+
+## Chunk 8 — Audio feedback · `TODO`
+Synthesised tones for hotkey-armed / listening / done / error · volume · mute ·
+non-blocking playback.
+
+## Chunk 9 — History · `TODO`
+SQLite with a migration runner from day one · FTS5 search · list UI · copy · delete
+one/all · pause toggle · optional auto-purge.
+
+## Chunk 10 — Settings + onboarding · `TODO`
+First-run: welcome → model choice → download → permissions → first dictation.
+Settings: hotkeys, microphone, model, sounds, history, update check, about.
+
+## Chunk 11 — Update check · `TODO`
+Once-daily cached GitHub Releases call · semver compare · banner with link · never
+downloads · switchable off · silent when offline.
+
+## Chunk 12 — Packaging · `TODO`
+AppImage + deb · MSI/NSIS · dmg (aarch64, ad-hoc signed) · GitHub Actions release ·
+README with Gatekeeper/SmartScreen instructions · NVIDIA model attribution.
+
+---
+
+## Cross-cutting standards
+
+**Rust** — domain modules not layer modules · `clippy -D warnings` in CI · `thiserror`
+for typed errors · no `unwrap()` outside tests · one abstraction (`Engine`), no
+speculative others.
+
+**TypeScript** — `strict: true` · `any` banned by lint · feature-folder slices ·
+`invoke()` called only from `src/lib/ipc/`, never from components.
+
+**Styling** — design tokens as CSS custom properties; no literal hex in components, so
+light/dark and any rebrand are a one-file change.
+
+**IPC** — `tauri-specta` generates TS types from the Rust command signatures, so a
+renamed field is a compile error rather than a runtime surprise.
