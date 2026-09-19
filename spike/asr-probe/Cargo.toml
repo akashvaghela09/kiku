@@ -1,0 +1,16 @@
+[package]
+name = "asr-probe"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "Chunk 0 gate: proves Parakeet + sherpa-onnx on CPU before Kiku is built."
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+cpal = "0.15"
+hound = "3.5"
+sherpa-rs = { version = "0.6.8", default-features = false, features = ["download-binaries", "static"] }
+
+[profile.release]
+opt-level = 3
