@@ -4,10 +4,11 @@
 //! captured" touches one directory instead of being spread across `services/`,
 //! `utils/` and `helpers/`.
 
-mod error;
+pub mod audio;
+pub mod error;
 mod ipc;
 
-pub use error::{Error, Result};
+pub use error::{CommandResult, Error, ErrorPayload, Result};
 
 use tauri::Manager;
 use tauri_specta::{collect_commands, Builder};
@@ -18,7 +19,7 @@ use tauri_specta::{collect_commands, Builder};
 /// to generate `src/lib/ipc/bindings.ts`. Because both read the same builder, a Rust
 /// signature change is a TypeScript compile error rather than a runtime surprise.
 fn specta_builder() -> Builder<tauri::Wry> {
-    Builder::<tauri::Wry>::new().commands(collect_commands![ipc::app_info])
+    Builder::<tauri::Wry>::new().commands(collect_commands![ipc::app_info, ipc::list_microphones])
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

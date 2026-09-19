@@ -1,9 +1,9 @@
 //! Errors, and the single shape they take when they cross to the frontend.
 //!
-//! `Error` is the rich internal enum. `ErrorPayload` is what the UI receives: a stable
-//! machine-readable `kind` for branching, plus a sentence already fit to display.
-//! Commands return `Result<T, ErrorPayload>` so `?` converts on the way out and no
-//! hand-written `specta` implementation is needed.
+//! `Error` is the rich internal enum that domain code returns. `ErrorPayload` is what
+//! the UI receives: a stable machine-readable `kind` for branching, plus a sentence
+//! already fit to display. Commands return `CommandResult`, so `?` converts on the way
+//! out and no hand-written `specta` implementation is needed.
 //!
 //! Variants describe what the *user* can do next, not which Rust call failed. That is
 //! why "the microphone is in use by another application" is a variant and "io error"
@@ -73,5 +73,8 @@ impl<E: Into<Error>> From<E> for ErrorPayload {
     }
 }
 
-/// Return type for every `#[tauri::command]`.
-pub type Result<T> = std::result::Result<T, ErrorPayload>;
+/// Return type for domain code — carries the rich variant.
+pub type Result<T> = std::result::Result<T, Error>;
+
+/// Return type for every `#[tauri::command]` — carries the wire shape.
+pub type CommandResult<T> = std::result::Result<T, ErrorPayload>;

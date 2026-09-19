@@ -5,7 +5,7 @@ Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`
 
 ---
 
-## Chunk 0 — Engine spike (gate) · `WIP`
+## Chunk 0 — Engine spike (gate) · `DONE`
 
 A throwaway headless Rust CLI proving the engine before any app exists.
 
@@ -30,14 +30,19 @@ model is therefore the 437 MB non-int8 CTC build, not the ~200 MB originally ass
 
 ---
 
-## Chunk 1 — Skeleton · `TODO`
+## Chunk 1 — Skeleton · `DONE`
 Tauri 2 + React/TS/Tailwind/Lucide scaffold · domain-module layout · `tauri-specta`
 typed IPC · icon pipeline from the brand master · strict TS · clippy/rustfmt/ESLint ·
 CI building all three targets.
 
-## Chunk 2 — Audio capture · `TODO`
-`cpal` device enumeration · capture → 16 kHz mono f32 · resampling · ring buffer ·
-max-duration cap · RMS level metering for the waveform · device hot-swap handling.
+## Chunk 2 — Audio capture · `DONE`
+`cpal` 0.18 device enumeration keyed on `DeviceId` (survives replugging better than a
+name) · opens the microphone at 16 kHz natively where the device allows it, skipping
+our resampler entirely · rubato FFT resampling otherwise, with tests proving a 15 kHz
+tone is attenuated rather than aliased down into the speech band · RMS/peak metering
+with clipping detection, computed in the audio callback to drive the overlay waveform ·
+10-minute recording ceiling · capture runs on its own thread because `cpal::Stream` is
+not `Send`, and device-open failures surface at `start()` rather than at `stop()`.
 
 ## Chunk 3 — Engine layer · `TODO`
 `Engine` trait over transducer *and* CTC models · sherpa-onnx implementation · model
