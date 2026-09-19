@@ -34,6 +34,8 @@ pub struct Preferences {
     pub history_paused: bool,
     /// Delete history entries older than this many days. `None` keeps everything.
     pub retention_days: Option<u32>,
+    /// Ask GitHub once a day whether a newer release exists. Never downloads.
+    pub check_for_updates: bool,
 }
 
 impl Default for Preferences {
@@ -44,6 +46,7 @@ impl Default for Preferences {
             sounds: true,
             history_paused: false,
             retention_days: None,
+            check_for_updates: true,
         }
     }
 }

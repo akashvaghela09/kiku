@@ -110,9 +110,13 @@ a history problem is the worse failure. UI lands in chunk 10.
 First-run: welcome → model choice → download → permissions → first dictation.
 Settings: hotkeys, microphone, model, sounds, history, update check, about.
 
-## Chunk 11 — Update check · `TODO`
-Once-daily cached GitHub Releases call · semver compare · banner with link · never
-downloads · switchable off · silent when offline.
+## Chunk 11 — Update check · `DONE`
+One GitHub Releases call, cached for a day, comparing semver and returning a URL ·
+never downloads, installs or executes anything · drafts and prereleases ignored · a
+non-semver tag reports Unknown rather than guessing · offline is `Unknown`, not an
+error, because a failed update check is not worth interrupting anyone about · the
+version comparison is separated from the fetch so it is tested without a network.
+Banner UI lands in chunk 10.
 
 ## Chunk 12 — Packaging · `TODO`
 AppImage + deb · MSI/NSIS · dmg (aarch64, ad-hoc signed) · GitHub Actions release ·

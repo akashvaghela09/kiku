@@ -19,6 +19,7 @@ use crate::hotkeys::{Hotkey, HotkeyBindings};
 use crate::models::{self, DownloadProgress, InstallState};
 use crate::sound::{self, Cue};
 use crate::state::{AppState, Preferences};
+use crate::update::{self, UpdateStatus};
 
 // ---------------------------------------------------------------- application
 
@@ -253,6 +254,33 @@ pub fn preview_sound(cue: SoundCue) -> CommandResult<()> {
     };
     sound::play(cue, true);
     Ok(())
+}
+
+// --------------------------------------------------------------------- updates
+
+/// Whether a newer Kiku has been published.
+///
+/// Uses a result cached for a day unless `force` is set, and reports `Unknown` rather
+/// than an error when offline — a failed update check is not something to interrupt
+/// someone about.
+#[tauri::command]
+#[specta::specta]
+pub async fn check_for_update(
+    state: State<'_, AppState>,
+    force: bool,
+) -> CommandResult<UpdateStatus> {
+    if !state.preferences().check_for_updates {
+        return Ok(UpdateStatus::Unknown);
+    }
+
+    let current = env!("CARGO_PKG_VERSION");
+    match update::check(&state.data_dir, current, force).await {
+        Ok(status) => Ok(status),
+        Err(error) => {
+            tracing::debug!(%error, "update check did not complete");
+            Ok(UpdateStatus::Unknown)
+        }
+    }
 }
 
 // ---------------------------------------------------------------------- events

@@ -14,6 +14,7 @@ pub mod models;
 pub mod output;
 pub mod sound;
 pub mod state;
+pub mod update;
 
 mod ipc;
 mod runtime;
@@ -52,6 +53,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
             ipc::delete_history_entry,
             ipc::clear_history,
             ipc::purge_history,
+            ipc::check_for_update,
         ])
         .events(collect_events![
             ipc::DownloadProgressed,
