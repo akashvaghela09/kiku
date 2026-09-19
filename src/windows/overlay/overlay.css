@@ -1,0 +1,100 @@
+/**
+ * Overlay-only styling.
+ *
+ * Everything here animates `opacity` or `transform` and nothing else. The capsule's
+ * width is the single exception, and it is allowed because the element is at most
+ * 260px wide and has no descendants whose layout depends on it.
+ *
+ * There is no `backdrop-filter` anywhere. Beyond the CPU cost while speech recognition
+ * is running, a transparent webview on X11 cannot sample the desktop behind it, so the
+ * effect would cost real milliseconds on two platforms and render nothing on the third.
+ */
+
+html,
+body,
+#root {
+  /* Second line of defence behind `set_ignore_cursor_events`. */
+  pointer-events: none;
+}
+
+.capsule {
+  /* Width is the only animated geometry; everything else is opacity/transform. */
+  transition: width var(--dur-base) var(--ease-spring);
+  animation: capsule-enter var(--dur-fast) var(--ease-out) both;
+  will-change: width;
+}
+
+@keyframes capsule-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/**
+ * Silence must not read as "crashed".
+ *
+ * When nothing is being said the bars settle to their floor, and the container alone
+ * breathes: one property, one element, one composited animation. The waveform sets
+ * `data-speaking` as soon as there is real audio, and the pulse stops so the two
+ * never fight.
+ */
+.wave-bars {
+  animation: breathe 2400ms var(--ease-in-out) infinite;
+}
+
+.wave-bars[data-speaking='true'] {
+  animation: none;
+  opacity: 1;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.processing-dot {
+  animation: dot-pulse 1000ms var(--ease-in-out) infinite;
+}
+
+@keyframes dot-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/**
+ * Reduced motion: the waveform keeps working — it answers "am I being heard?", which
+ * is information, not decoration — but it drops to 10Hz in JavaScript and everything
+ * decorative here stops.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .capsule {
+    animation: none;
+  }
+
+  .wave-bars {
+    animation: none;
+    opacity: 0.85;
+  }
+
+  .processing-dot {
+    animation: none;
+    opacity: 0.7;
+  }
+}

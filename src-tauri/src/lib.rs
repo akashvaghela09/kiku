@@ -12,6 +12,7 @@ pub mod history;
 pub mod hotkeys;
 pub mod models;
 pub mod output;
+pub mod overlay;
 pub mod sound;
 pub mod state;
 pub mod update;
@@ -93,10 +94,6 @@ pub fn run() {
             // The overlay window is created at launch and merely hidden, never created
             // on demand: creating an OS window costs 30-120 ms of visible lag, which is
             // most of the latency budget for the whole press-to-paint path.
-            if let Some(overlay) = app.get_webview_window("overlay") {
-                overlay.set_ignore_cursor_events(true)?;
-            }
-
             // A hotkey already owned by another application must not stop Kiku from
             // starting: the window opens, Settings shows the conflict, and the user
             // rebinds.

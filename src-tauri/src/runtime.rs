@@ -4,7 +4,9 @@
 //! which keeps `dictation`, `audio` and `asr` free of any UI concern and testable on
 //! their own.
 
+use std::str::FromStr;
 use tauri::{AppHandle, Emitter, Manager, Runtime};
+
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 use tauri_specta::Event;
 
@@ -12,6 +14,7 @@ use crate::dictation::{DictationState, Outcome};
 use crate::hotkeys::{HotkeyAction, HotkeyBindings, Interpreter};
 use crate::ipc::{DictationDiscarded, DictationStateChanged, LevelMeasured, TranscriptProduced};
 use crate::output::{self, Delivery};
+use crate::overlay;
 use crate::sound::{self, Cue};
 use crate::state::AppState;
 
@@ -37,11 +40,69 @@ pub fn install_hotkeys(app: &AppHandle, bindings: HotkeyBindings) -> crate::Resu
             crate::Error::HotkeyTaken(bindings.hold.display.clone())
         })?;
 
+    tracing::info!(
+        hold = %bindings.hold.spec,
+        toggle = %bindings.toggle.spec,
+        "dictation hotkeys registered"
+    );
     app.state::<AppState>().hotkeys.adopt(bindings);
     Ok(())
 }
 
+/// Escape, registered only while a session is running.
+///
+/// The overlay is click-through by design, so it can never receive a click and the
+/// keyboard is the only channel through which a recording can be abandoned. Escape is
+/// grabbed for the duration of the session and released immediately afterwards —
+/// holding it globally would break Escape everywhere else on the system.
+fn escape_shortcut() -> Option<Shortcut> {
+    Shortcut::from_str("Escape").ok()
+}
+
+fn grab_escape(app: &AppHandle) {
+    let Some(escape) = escape_shortcut() else {
+        return;
+    };
+
+    let handler_app = app.clone();
+    if let Err(error) = app
+        .global_shortcut()
+        .on_shortcut(escape, move |_, _, event| {
+            if matches!(event.state(), ShortcutState::Pressed) {
+                cancel(&handler_app);
+            }
+        })
+    {
+        // Something else owns Escape. Dictation still works; only the cancel
+        // gesture is unavailable, which is not worth interrupting anyone about.
+        tracing::debug!(%error, "could not grab Escape for cancelling");
+    }
+}
+
+fn release_escape(app: &AppHandle) {
+    if let Some(escape) = escape_shortcut() {
+        let _ = app.global_shortcut().unregister(escape);
+    }
+}
+
+fn cancel(app: &AppHandle) {
+    let state = app.state::<AppState>();
+    if !state.dictation.is_listening() {
+        return;
+    }
+
+    if let Err(error) = state.dictation.cancel() {
+        tracing::warn!(%error, "could not cancel the recording");
+    }
+
+    release_escape(app);
+    let _ = DictationDiscarded(crate::dictation::Discarded::TooShort).emit(app);
+    publish_state(app, DictationState::Idle);
+    hide_overlay(app);
+}
+
 fn handle(app: &AppHandle, action: HotkeyAction) {
+    tracing::debug!(?action, "hotkey action");
     let state = app.state::<AppState>();
 
     match action {
@@ -78,6 +139,7 @@ fn start(app: &AppHandle) {
     match result {
         Ok(()) => {
             sound::play(Cue::Start, state.preferences().sounds);
+            grab_escape(app);
             show_overlay(app);
             publish_state(app, DictationState::Listening);
         }
@@ -95,6 +157,7 @@ fn stop(app: &AppHandle) {
         return;
     }
 
+    release_escape(app);
     publish_state(app, DictationState::Processing);
 
     // Decoding blocks for a few hundred milliseconds; keep it off the event loop so
@@ -187,16 +250,13 @@ fn publish_state<R: Runtime>(app: &AppHandle<R>, state: DictationState) {
     let _ = DictationStateChanged(state).emit(app);
 }
 
-fn show_overlay<R: Runtime>(app: &AppHandle<R>) {
-    if let Some(overlay) = app.get_webview_window("overlay") {
-        // `show` rather than create: the window exists from launch, because creating
-        // one costs 30-120 ms of visible lag on the press-to-paint path.
-        let _ = overlay.show();
-    }
+fn show_overlay(app: &AppHandle) {
+    // `show` rather than create: the window exists from launch, because creating one
+    // costs 30-120 ms of visible lag on the press-to-paint path. Its position is
+    // recomputed every time, never cached.
+    overlay::show(app);
 }
 
-fn hide_overlay<R: Runtime>(app: &AppHandle<R>) {
-    if let Some(overlay) = app.get_webview_window("overlay") {
-        let _ = overlay.hide();
-    }
+fn hide_overlay(app: &AppHandle) {
+    overlay::hide(app);
 }

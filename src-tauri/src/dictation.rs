@@ -28,8 +28,9 @@ use crate::error::{Error, Result};
 ///
 /// The audio callback fires far more often than this — every few milliseconds — and
 /// forwarding each one would flood the IPC channel for a waveform that redraws at
-/// screen rate anyway. About fourteen updates a second is smooth to the eye and cheap.
-pub const LEVEL_INTERVAL: Duration = Duration::from_millis(70);
+/// screen rate anyway. Thirty a second is smooth to the eye and cheap; sixty doubles
+/// the traffic during transcription for no visible gain.
+pub const LEVEL_INTERVAL: Duration = Duration::from_millis(33);
 
 /// Recordings shorter than this are treated as a mistap rather than speech.
 const MIN_UTTERANCE: Duration = Duration::from_millis(250);

@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client';
 
 import '@/styles/global.css';
+import './overlay.css';
 import { Overlay } from './Overlay';
 
 const container = document.getElementById('root');

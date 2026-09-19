@@ -73,10 +73,17 @@ application is a warning at startup, not a failure to launch · also lands the
 `Dictation` session that hotkeys drive, with audio levels throttled from the audio
 callback rate to ~14 Hz before they reach the overlay.
 
-## Chunk 6 — Overlay · `TODO`
-Transparent, always-on-top, click-through, non-activating window · idle → listening →
-processing → done → error · amplitude-driven waveform · multi-monitor placement ·
-reduced-motion support.
+## Chunk 6 — Overlay · `DONE`
+Transparent, always-on-top, click-through capsule, verified running on this machine ·
+placed on the monitor under the cursor, anchored to the **work area** so it clears the
+taskbar, recomputed on every show · bars radiate from the centre rather than scrolling
+left to right, because a scrolling waveform reads as a recording timeline and Kiku
+stores no audio · the waveform loop writes `transform` imperatively inside one rAF
+callback and never calls `setState` · RMS mapped through dB, fast-attack/slow-release
+smoothing, and a breathing pulse at silence so it never reads as crashed ·
+reduced-motion drops to 10 Hz rather than stopping, because the waveform answers "am I
+being heard?" and that is information · Escape cancels, grabbed only while a session is
+running.
 
 ## Chunk 7 — Output · `DONE`
 Clipboard write is unconditional; the paste is synthesised on top of it, so a refused
