@@ -7,20 +7,38 @@
 pub mod asr;
 pub mod audio;
 pub mod error;
+pub mod models;
+pub mod state;
+
 mod ipc;
 
 pub use error::{CommandResult, Error, ErrorPayload, Result};
 
 use tauri::Manager;
-use tauri_specta::{collect_commands, Builder};
+use tauri_specta::{collect_commands, collect_events, Builder};
+
+use crate::state::AppState;
 
 /// The single source of truth for the IPC surface.
 ///
-/// Used twice: once by `run` to register the handlers, and once by the `bindings` test
-/// to generate `src/lib/ipc/bindings.ts`. Because both read the same builder, a Rust
+/// Used twice: by `run` to register the handlers, and by the `bindings` test to
+/// generate `src/lib/ipc/bindings.ts`. Because both read the same builder, a Rust
 /// signature change is a TypeScript compile error rather than a runtime surprise.
 fn specta_builder() -> Builder<tauri::Wry> {
-    Builder::<tauri::Wry>::new().commands(collect_commands![ipc::app_info, ipc::list_microphones])
+    Builder::<tauri::Wry>::new()
+        .commands(collect_commands![
+            ipc::app_info,
+            ipc::list_microphones,
+            ipc::list_models,
+            ipc::download_model,
+            ipc::delete_model,
+            ipc::verify_model,
+            ipc::engine_status,
+        ])
+        .events(collect_events![
+            ipc::DownloadProgressed,
+            ipc::EngineStatusChanged,
+        ])
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -42,12 +60,20 @@ pub fn run() {
         .setup(move |app| {
             builder.mount_events(app);
 
+            let data_dir = app.path().app_data_dir()?;
+            std::fs::create_dir_all(&data_dir)?;
+            tracing::info!(path = %data_dir.display(), "application data directory");
+
+            app.manage(AppState::new(data_dir));
+
             // The overlay window is created at launch and merely hidden, never created
-            // on demand: creating an OS window costs 30-120ms of visible lag, which is
+            // on demand: creating an OS window costs 30-120 ms of visible lag, which is
             // most of the latency budget for the whole press-to-paint path.
             if let Some(overlay) = app.get_webview_window("overlay") {
                 overlay.set_ignore_cursor_events(true)?;
             }
+
+            load_model_in_background(app.handle().clone());
 
             if let Some(main) = app.get_webview_window("main") {
                 main.show()?;
@@ -57,6 +83,38 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running Kiku");
+}
+
+/// Load the speech model without blocking startup.
+///
+/// Loading costs about four seconds. Doing it on the setup thread would mean a window
+/// that does not paint until it finishes, so it runs on a blocking worker and the UI
+/// follows `EngineStatusChanged` instead.
+fn load_model_in_background(app: tauri::AppHandle) {
+    use crate::asr::ModelFiles;
+    use tauri_specta::Event;
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let state = app.state::<AppState>();
+
+        let Some(spec) = models::ALL
+            .iter()
+            .find(|spec| state.models.is_installed(spec))
+        else {
+            tracing::info!("no model installed yet; onboarding will download one");
+            let _ = ipc::EngineStatusChanged(state.asr.status()).emit(&app);
+            return;
+        };
+
+        let dir = state.models.dir_for(spec);
+        let result = ModelFiles::discover(&dir).and_then(|files| state.asr.load(&files, spec.id));
+
+        if let Err(error) = result {
+            tracing::error!(%error, model = spec.id, "could not load the speech model");
+        }
+
+        let _ = ipc::EngineStatusChanged(state.asr.status()).emit(&app);
+    });
 }
 
 #[cfg(test)]

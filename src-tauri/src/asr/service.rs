@@ -8,7 +8,7 @@
 
 use std::sync::Mutex;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use specta::Type;
 
 use super::engine::{Engine, Transcript};
@@ -16,7 +16,7 @@ use super::parakeet::{ModelFiles, ParakeetEngine};
 use crate::error::{Error, Result};
 
 /// What the UI needs to know about the recogniser.
-#[derive(Debug, Clone, Serialize, Type)]
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase", tag = "state", content = "detail")]
 pub enum EngineStatus {
     /// No model installed yet — onboarding has not finished.

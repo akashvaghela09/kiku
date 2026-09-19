@@ -36,6 +36,10 @@ tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
 cpal = "0.18"
 rubato = "5"
 sherpa-rs = { version = "0.6.8", default-features = false, features = ["download-binaries"] }
+sha2 = "0.10"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream", "http2"] }
+futures-util = { version = "0.3", default-features = false }
+tokio = { version = "1", features = ["fs", "io-util"] }
 
 [features]
 # Type generation runs as a test so it cannot end up in a release binary.
@@ -50,3 +54,4 @@ strip = true
 
 [dev-dependencies]
 hound = "3.5"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

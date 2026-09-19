@@ -53,9 +53,16 @@ measurements showed returns flatten, leaving cores for the waveform · integrati
 runs the real model and asserts both the text and the real-time factor, skipping
 itself when no model is installed.
 
-## Chunk 4 — Model management · `TODO`
-Two-model registry with pinned revisions · resumable download with progress ·
-SHA-256 verification · app-data storage · switch, delete, repair.
+## Chunk 4 — Model management · `DONE`
+Registry pins a Hugging Face commit, never a branch, and every file carries the
+SHA-256 it must hash to (verified against Hugging Face's own LFS object ids) ·
+resumable download into `.part` files, renamed into place only after the hash matches,
+so a complete-looking model is always a correct one · a server that ignores a Range
+request is detected rather than corrupting the resume · cheap startup check on
+presence and size, expensive hash check only after download or on explicit repair ·
+byte counts cross to the frontend as `f64`, which is exactly what a JavaScript number
+is · network integration test exercises the real endpoint using only the 9 KB tokens
+file.
 
 ## Chunk 5 — Global hotkeys · `TODO`
 Press/release with key-repeat debounce · toggle mode · registration conflict detection
