@@ -64,9 +64,14 @@ byte counts cross to the frontend as `f64`, which is exactly what a JavaScript n
 is · network integration test exercises the real endpoint using only the 9 KB tokens
 file.
 
-## Chunk 5 — Global hotkeys · `TODO`
-Press/release with key-repeat debounce · toggle mode · registration conflict detection
-with actionable errors · rebinding with a capture UI · per-OS quirks.
+## Chunk 5 — Global hotkeys · `DONE`
+`Alt+Space` hold-to-talk and `Ctrl+Alt+Space` toggle · the hold/toggle semantics and
+key-repeat suppression live in a pure `Interpreter` that is tested without an OS ·
+rebinding rolls back to the previous pair if registration fails, so a conflict can
+never leave the user with no working hotkey · a hotkey already owned by another
+application is a warning at startup, not a failure to launch · also lands the
+`Dictation` session that hotkeys drive, with audio levels throttled from the audio
+callback rate to ~14 Hz before they reach the overlay.
 
 ## Chunk 6 — Overlay · `TODO`
 Transparent, always-on-top, click-through, non-activating window · idle → listening →

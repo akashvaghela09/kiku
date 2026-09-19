@@ -9,9 +9,12 @@ use specta::Type;
 use tauri::State;
 use tauri_specta::Event;
 
-use crate::asr::EngineStatus;
+use crate::asr::{EngineStatus, Transcript};
+use crate::audio::Level;
 use crate::audio::{self, MicrophoneInfo};
+use crate::dictation::{DictationState, Discarded};
 use crate::error::{CommandResult, Error};
+use crate::hotkeys::{Hotkey, HotkeyBindings};
 use crate::models::{self, DownloadProgress, InstallState};
 use crate::state::AppState;
 
@@ -131,6 +134,47 @@ pub fn engine_status(state: State<'_, AppState>) -> CommandResult<EngineStatus> 
     Ok(state.asr.status())
 }
 
+// -------------------------------------------------------------------- hotkeys
+
+/// The dictation hotkeys currently registered.
+#[tauri::command]
+#[specta::specta]
+pub fn hotkey_bindings(state: State<'_, AppState>) -> CommandResult<HotkeyBindings> {
+    Ok(state.hotkeys.current())
+}
+
+/// Validate a shortcut without registering it, so a rebinding UI can give immediate
+/// feedback as the user types.
+#[tauri::command]
+#[specta::specta]
+pub fn validate_hotkey(spec: String) -> CommandResult<Hotkey> {
+    Ok(Hotkey::parse(&spec)?)
+}
+
+// ------------------------------------------------------------------ dictation
+
+/// Whether Kiku is idle, listening or transcribing.
+#[tauri::command]
+#[specta::specta]
+pub fn dictation_state(state: State<'_, AppState>) -> CommandResult<DictationState> {
+    Ok(state.dictation.state())
+}
+
+/// Abandon the current recording without transcribing it.
+#[tauri::command]
+#[specta::specta]
+pub fn cancel_dictation(state: State<'_, AppState>) -> CommandResult<()> {
+    Ok(state.dictation.cancel()?)
+}
+
+/// Choose the microphone. `None` follows the system default.
+#[tauri::command]
+#[specta::specta]
+pub fn set_microphone(state: State<'_, AppState>, device_id: Option<String>) -> CommandResult<()> {
+    state.set_microphone(device_id);
+    Ok(())
+}
+
 // ---------------------------------------------------------------------- events
 
 /// Emitted repeatedly while a model downloads.
@@ -140,3 +184,19 @@ pub struct DownloadProgressed(pub DownloadProgress);
 /// Emitted when the recogniser's state changes, so the UI never has to poll.
 #[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
 pub struct EngineStatusChanged(pub EngineStatus);
+
+/// Emitted as dictation moves between idle, listening and processing.
+#[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
+pub struct DictationStateChanged(pub DictationState);
+
+/// Emitted about fourteen times a second while recording, to drive the waveform.
+#[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
+pub struct LevelMeasured(pub Level);
+
+/// Emitted when a dictation produced text.
+#[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
+pub struct TranscriptProduced(pub Transcript);
+
+/// Emitted when a dictation finished but produced nothing worth keeping.
+#[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
+pub struct DictationDiscarded(pub Discarded);

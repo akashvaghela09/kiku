@@ -6,11 +6,14 @@
 
 pub mod asr;
 pub mod audio;
+pub mod dictation;
 pub mod error;
+pub mod hotkeys;
 pub mod models;
 pub mod state;
 
 mod ipc;
+mod runtime;
 
 pub use error::{CommandResult, Error, ErrorPayload, Result};
 
@@ -34,10 +37,19 @@ fn specta_builder() -> Builder<tauri::Wry> {
             ipc::delete_model,
             ipc::verify_model,
             ipc::engine_status,
+            ipc::hotkey_bindings,
+            ipc::validate_hotkey,
+            ipc::dictation_state,
+            ipc::cancel_dictation,
+            ipc::set_microphone,
         ])
         .events(collect_events![
             ipc::DownloadProgressed,
             ipc::EngineStatusChanged,
+            ipc::DictationStateChanged,
+            ipc::LevelMeasured,
+            ipc::TranscriptProduced,
+            ipc::DictationDiscarded,
         ])
 }
 
@@ -71,6 +83,15 @@ pub fn run() {
             // most of the latency budget for the whole press-to-paint path.
             if let Some(overlay) = app.get_webview_window("overlay") {
                 overlay.set_ignore_cursor_events(true)?;
+            }
+
+            // A hotkey already owned by another application must not stop Kiku from
+            // starting: the window opens, Settings shows the conflict, and the user
+            // rebinds.
+            if let Err(error) =
+                runtime::install_hotkeys(app.handle(), crate::hotkeys::HotkeyBindings::default())
+            {
+                tracing::warn!(%error, "dictation hotkeys are unavailable");
             }
 
             load_model_in_background(app.handle().clone());

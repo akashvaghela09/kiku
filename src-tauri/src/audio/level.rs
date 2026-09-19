@@ -5,14 +5,14 @@
 //! clipping flag is what lets Settings tell a user their input gain is too high rather
 //! than silently feeding distorted audio to the recogniser.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use specta::Type;
 
 /// Samples at or above this magnitude are treated as clipped. Slightly below 1.0
 /// because converters round, and a run of exact 1.0 samples is already distortion.
 const CLIP_THRESHOLD: f32 = 0.99;
 
-#[derive(Debug, Clone, Copy, Default, Serialize, Type)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Level {
     /// Root mean square of the buffer, 0.0..=1.0. Perceptually the useful one.
