@@ -7,7 +7,7 @@
 **Offline dictation for your desktop.**
 Hold a key, speak, and the text appears where you are already typing.
 
-[![Download](https://img.shields.io/badge/Download-v1.1.4-22A7CC?style=for-the-badge)](https://github.com/akashvaghela09/kiku/releases/latest)
+[![Download](https://img.shields.io/badge/Download-latest-22A7CC?style=for-the-badge)](https://github.com/akashvaghela09/kiku/releases/latest)
 [![Platforms](https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-1C8FAF?style=for-the-badge)](https://github.com/akashvaghela09/kiku/releases/latest)
 [![License](https://img.shields.io/badge/License-MIT-2A94B2?style=for-the-badge)](LICENSE)
 
@@ -53,9 +53,7 @@ key, and Ctrl + Shift + Space for a chord that no platform has claimed.
 
 ## Installing
 
-Kiku is not code signed. That is a deliberate choice: certificates cost money every
-year and buy nothing for a tool you can build yourself from this repository. It does
-mean each operating system warns you once.
+Kiku is not code signed, so each operating system warns you once on first launch.
 
 <details>
 <summary><b>Linux</b></summary>
@@ -134,18 +132,51 @@ rather than pretending to be quick.
 
 ## Building it yourself
 
+You will need [Rust](https://rustup.rs) and [Node 22 or newer](https://nodejs.org).
+Then, on any platform:
+
 ```sh
 npm install
 npm run app          # run in development
-npm run app:build    # bundle for this platform
+npm run app:build    # bundle installers for this platform
 ```
 
-You will need Rust and Node. On Debian or Ubuntu, also:
+Installers land in `src-tauri/target/release/bundle/`. Each platform needs its own
+toolchain first.
+
+<details>
+<summary><b>Linux</b></summary>
 
 ```sh
 sudo apt install libwebkit2gtk-4.1-dev libasound2-dev build-essential curl file \
-                 libssl-dev libayatana-appindicator3-dev librsvg2-dev
+                 libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
 ```
+
+Builds an `.AppImage` and a `.deb`. X11 only.
+
+</details>
+
+<details>
+<summary><b>macOS</b></summary>
+
+```sh
+xcode-select --install
+```
+
+Builds a `.dmg`, natively for whichever architecture you are on.
+
+</details>
+
+<details>
+<summary><b>Windows</b></summary>
+
+Install [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/)
+with the **Desktop development with C++** workload. WebView2 is already present on
+Windows 11 and ships with the installer on Windows 10.
+
+Builds an NSIS `-setup.exe`.
+
+</details>
 
 Useful commands:
 
@@ -165,11 +196,11 @@ differs, which is what stops a stale copy from quietly compiling.
 
 ## Continuous integration
 
-Every push to `master` builds installers for Windows, macOS and Linux and uploads them
-to the workflow run, where they stay downloadable for 30 days, so there is always
-something to test without building locally. Pushing a `v*` tag builds the same
-installers and attaches them to a **draft** release, so publishing stays a decision
-rather than a side effect.
+Every push runs the checks: lint, types, formatting, clippy and the test suite.
+
+Installers are built only when a `v*` tag is pushed, or when the workflow is started
+by hand. That build runs on all three platforms and attaches the results to a **draft**
+release, so publishing stays a decision rather than a side effect of pushing.
 
 ## Under the hood
 
