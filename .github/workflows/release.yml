@@ -16,6 +16,15 @@ on:
     tags: ['v*']
   workflow_dispatch:
 
+# Every step below runs several commands. GitHub's default shell on Windows is pwsh,
+# which propagates only the LAST command's exit code, so `cargo test` could crash and
+# the step would still pass if the `git diff` after it returned 0. That is exactly what
+# happened: the Windows bindings check reported green for weeks while the test binary
+# was dying with STATUS_ENTRYPOINT_NOT_FOUND.
+defaults:
+  run:
+    shell: bash
+
 permissions:
   contents: write
 
@@ -135,12 +144,34 @@ jobs:
           cargo clippy --all-targets -- -D warnings
           cargo test --lib
 
-      # The release binary must exist before bundling: the sherpa-onnx shared
-      # libraries only appear in target/release once the build script has run, and
-      # tauri.<platform>.conf.json lists them as bundle resources.
-      - name: Build
+      # STATUS_ENTRYPOINT_NOT_FOUND names a real DLL missing a real export, and the
+      # libraries are demonstrably already beside the binary, so placement is not the
+      # cause. This prints both sides of the import table once so the next change is
+      # informed rather than another guess. Remove it once the cause is known.
+      - name: Diagnose the Windows loader failure
+        if: runner.os == 'Windows'
+        shell: pwsh
+        continue-on-error: true
         working-directory: src-tauri
-        run: cargo build --release ${{ matrix.args }}
+        run: |
+          cargo test --no-run 2>&1 | Select-Object -Last 5
+          Copy-Item target\debug\*.dll target\debug\deps\ -Force -ErrorAction SilentlyContinue
+          "== DLLs beside the test binary"
+          Get-ChildItem target\debug\deps\*.dll | Select-Object Name, Length
+          if (Test-Path C:\Windows\System32\onnxruntime.dll) {
+            "== System32 ALSO has onnxruntime.dll"
+            (Get-Item C:\Windows\System32\onnxruntime.dll).VersionInfo | Format-List FileVersion, ProductVersion
+          } else { "== System32 has no onnxruntime.dll" }
+          $dumpbin = Get-ChildItem "C:\Program Files\Microsoft Visual Studio\*\*\VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          $exe = Get-ChildItem target\debug\deps\kiku_lib-*.exe | Select-Object -First 1
+          if ($dumpbin -and $exe) {
+            "== what the test binary depends on"
+            & $dumpbin /DEPENDENTS $exe.FullName
+            "== what sherpa-onnx-c-api.dll depends on"
+            & $dumpbin /DEPENDENTS target\debug\deps\sherpa-onnx-c-api.dll
+            "== symbols it imports from onnxruntime"
+            & $dumpbin /IMPORTS target\debug\deps\sherpa-onnx-c-api.dll | Select-String -Pattern 'onnxruntime' -Context 0,25
+          } else { "dumpbin or test exe not found" }
 
       # Tagged: attach to a draft release.
       - name: Bundle and draft a release

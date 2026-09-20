@@ -5,6 +5,15 @@ on:
     branches: [main, master]
   pull_request:
 
+# Every step below runs several commands. GitHub's default shell on Windows is pwsh,
+# which propagates only the LAST command's exit code, so `cargo test` could crash and
+# the step would still pass if the `git diff` after it returned 0. That is exactly what
+# happened: the Windows bindings check reported green for weeks while the test binary
+# was dying with STATUS_ENTRYPOINT_NOT_FOUND.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   check:
     runs-on: ubuntu-22.04
