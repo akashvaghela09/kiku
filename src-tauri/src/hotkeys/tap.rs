@@ -22,10 +22,18 @@
 use std::time::{Duration, Instant};
 
 /// A press shorter than this was a tap, not a hold.
+///
+/// Measured against real taps on this machine, which ran 50-120ms: 250ms is ample,
+/// and raising it would only reclassify a genuine short hold as a tap.
 pub const DEFAULT_HOLD_THRESHOLD: Duration = Duration::from_millis(250);
 
 /// A second tap within this long of the first latches hands-free recording.
-pub const DEFAULT_DOUBLE_TAP_WINDOW: Duration = Duration::from_millis(350);
+///
+/// Measured from the release of the first tap. Real double taps on this machine left
+/// gaps of up to 350ms, which the previous 350ms window rejected on a boundary
+/// comparison. 500ms is also what Windows has long used for a double click, and a
+/// shortcut stricter than the desktop it runs on feels broken rather than precise.
+pub const DEFAULT_DOUBLE_TAP_WINDOW: Duration = Duration::from_millis(500);
 
 /// What the watcher observed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -252,6 +260,31 @@ mod tests {
         );
     }
 
+    /// The timings this exists to fix: a deliberate double tap, not a fast one.
+    #[test]
+    fn an_unhurried_double_tap_still_latches() {
+        let mut machine = TapMachine::default();
+        let start = Instant::now();
+
+        // 110ms on the key and 350ms between the presses: measured from real taps,
+        // and a gap the previous 350ms window rejected on its boundary comparison.
+        machine.advance(Input::Down, start);
+        assert_eq!(
+            machine.advance(Input::Up, start + Duration::from_millis(110)),
+            Some(Outcome::Discard)
+        );
+        assert_eq!(
+            machine.advance(Input::Down, start + Duration::from_millis(460)),
+            Some(Outcome::Start),
+            "a second tap 350ms after release should still latch"
+        );
+        assert_eq!(
+            machine.advance(Input::Up, start + Duration::from_millis(560)),
+            None,
+            "releasing must not end a latched recording"
+        );
+    }
+
     #[test]
     fn a_second_tap_that_arrives_too_late_does_not_latch() {
         let mut machine = TapMachine::default();
@@ -260,14 +293,14 @@ mod tests {
         machine.advance(Input::Down, start);
         machine.advance(Input::Up, start + Duration::from_millis(80));
         // Past the double-tap window: this is a fresh press, not a latch.
-        machine.advance(Input::Tick, start + Duration::from_millis(600));
+        machine.advance(Input::Tick, start + Duration::from_millis(900));
 
         assert_eq!(
-            machine.advance(Input::Down, start + Duration::from_millis(700)),
+            machine.advance(Input::Down, start + Duration::from_millis(1000)),
             Some(Outcome::Start)
         );
         assert_eq!(
-            machine.advance(Input::Up, start + Duration::from_millis(2000)),
+            machine.advance(Input::Up, start + Duration::from_millis(2400)),
             Some(Outcome::Finish),
             "it should behave as an ordinary hold, not as a latch"
         );

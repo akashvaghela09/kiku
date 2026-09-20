@@ -61,10 +61,26 @@ export function useOverlaySession(): Session {
   const processingSince = useRef(0);
 
   useEffect(() => {
-    const timers: number[] = [];
+    let timers: number[] = [];
+
+    /**
+     * Drop anything still scheduled.
+     *
+     * A terminal state queues its own disappearance several hundred milliseconds out.
+     * If a new dictation begins inside that window - which is exactly what a double
+     * tap does, since the first tap is discarded and the second starts recording about
+     * 130ms later - those timers would still fire and hide a capsule that is busy
+     * listening. The recording carried on; only the indicator vanished, which read as
+     * the double tap cancelling itself.
+     */
+    const clearTimers = () => {
+      timers.forEach((timer) => window.clearTimeout(timer));
+      timers = [];
+    };
 
     /** Move to a terminal state, then disappear after it has been seen. */
     const settle = (next: CapsuleState, text: string | null = null) => {
+      clearTimers();
       const elapsed = Date.now() - processingSince.current;
       const wait = Math.max(0, MIN_PROCESSING_MS - elapsed);
 
@@ -102,12 +118,14 @@ export function useOverlaySession(): Session {
       events.dictationStateChanged.listen((event) => {
         const next = event.payload.state;
         if (next === 'listening') {
+          clearTimers();
           levelRef.current = 0;
           processingSince.current = 0;
           setExiting(false);
           setState('listening');
           setMessage(null);
         } else if (next === 'processing') {
+          clearTimers();
           processingSince.current = Date.now();
           setExiting(false);
           setState('processing');
@@ -129,7 +147,7 @@ export function useOverlaySession(): Session {
     ]);
 
     return () => {
-      timers.forEach((timer) => window.clearTimeout(timer));
+      clearTimers();
       void unlisten.then((offs) => offs.forEach((off) => off()));
     };
   }, []);
