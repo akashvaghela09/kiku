@@ -33,6 +33,13 @@ export function useHistory(query: string) {
   // makes a search box show results for a query the user has already changed.
   const requestId = useRef(0);
 
+  // The live query, readable from a subscription that must outlive it. Putting `query`
+  // in that effect's dependencies instead would tear the listener down and build it
+  // back up on every keystroke, and since registration is asynchronous, each rebuild
+  // leaves a window with nothing listening.
+  const queryRef = useRef(query);
+  queryRef.current = query;
+
   const load = useCallback(async (search: string) => {
     const id = ++requestId.current;
     setState((current) => ({ ...current, loading: true }));
@@ -57,11 +64,46 @@ export function useHistory(query: string) {
     return () => window.clearTimeout(timer);
   }, [query, load]);
 
-  // A new dictation should appear without the user doing anything.
+  const reload = useCallback(() => void load(queryRef.current), [load]);
+
+  /**
+   * Keeping the list current, by two independent routes.
+   *
+   * The event is the fast one: a dictation lands in the database before it is
+   * announced, so by the time this runs the row is already there to be read.
+   *
+   * Focus is the safety net, and it is not redundant. `listen` resolves a promise, so
+   * an event arriving in the moments before a subscription is live is simply missed,
+   * and the window is usually in the background while someone is dictating into
+   * another application - which is exactly when the list would otherwise go stale
+   * without anyone seeing it happen. Coming back to the window always shows the truth.
+   */
   useEffect(() => {
-    const unlisten = events.transcriptProduced.listen(() => void load(query));
-    return () => void unlisten.then((off) => off());
-  }, [query, load]);
+    let cancelled = false;
+    let off: (() => void) | undefined;
+
+    // If the effect is torn down before registration completes - which StrictMode does
+    // on every mount in development - unsubscribe as soon as there is something to
+    // unsubscribe from, rather than leaking a listener or dropping the live one.
+    void events.transcriptProduced.listen(reload).then((unlisten) => {
+      if (cancelled) unlisten();
+      else off = unlisten;
+    });
+
+    const refreshIfVisible = () => {
+      if (document.visibilityState === 'visible') reload();
+    };
+
+    window.addEventListener('focus', refreshIfVisible);
+    document.addEventListener('visibilitychange', refreshIfVisible);
+
+    return () => {
+      cancelled = true;
+      off?.();
+      window.removeEventListener('focus', refreshIfVisible);
+      document.removeEventListener('visibilitychange', refreshIfVisible);
+    };
+  }, [reload]);
 
   const remove = useCallback(async (id: number) => {
     // Removed from the list first: the database call is fast, and waiting for it
@@ -76,5 +118,5 @@ export function useHistory(query: string) {
 
   // No bulk clear here: deleting everything is a settings act, and Settings calls the
   // command directly. A second copy of it would only be dead code.
-  return { ...state, reload: () => void load(query), remove };
+  return { ...state, reload, remove };
 }
