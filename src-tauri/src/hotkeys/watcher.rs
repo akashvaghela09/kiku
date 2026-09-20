@@ -156,10 +156,6 @@ fn watch(
     let device = DeviceState::new();
     let mut machine = TapMachine::new(thresholds);
     let mut was_down = false;
-    // Only for the diagnostic below: how long the key was held, and how long it had
-    // been released. Guessing at these numbers is what made the double tap thresholds
-    // wrong in the first place.
-    let mut last_edge: Option<Instant> = None;
 
     tracing::info!(key = key.spec(), "watching a single-key shortcut");
 
@@ -179,24 +175,7 @@ fn watch(
         };
         was_down = is_down;
 
-        let outcome = machine.advance(input, now);
-
-        // Run with `RUST_LOG=kiku_lib::hotkeys=debug` to see real tap timings against
-        // the thresholds, rather than inferring them from what the app did next.
-        if matches!(input, Input::Down | Input::Up) {
-            let since_ms = last_edge.map(|edge| now.duration_since(edge).as_millis());
-            match input {
-                Input::Down => tracing::debug!(
-                    released_for_ms = ?since_ms,
-                    ?outcome,
-                    "key down"
-                ),
-                _ => tracing::debug!(held_for_ms = ?since_ms, ?outcome, "key up"),
-            }
-            last_edge = Some(now);
-        }
-
-        if let Some(outcome) = outcome {
+        if let Some(outcome) = machine.advance(input, now) {
             on_outcome(outcome);
         }
 
