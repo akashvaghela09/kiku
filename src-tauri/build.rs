@@ -16,6 +16,12 @@
 //! produced `unable to find library -lonnxruntime` at link time. Restoring them from
 //! the staging directory when the profile directory has lost them makes a cached
 //! build behave like a clean one, and the staging directory is itself cached.
+//!
+//! They are also copied next to the test binaries. Windows has no rpath: the loader
+//! resolves a DLL from the directory of the executable that needs it, and a test
+//! binary lives in `target/<profile>/deps/`. Without a copy there, `cargo test` on
+//! Windows died before the harness produced a single line of output, which reads as
+//! "test failed" with nothing to go on.
 
 use std::path::{Path, PathBuf};
 
@@ -58,16 +64,45 @@ fn stage_libraries() -> std::io::Result<()> {
         return Ok(());
     };
 
-    let staged = copy_libraries(&profile_dir, &stage)?;
+    // Gather from everywhere they might be. On Linux they land beside the profile
+    // binaries; on Windows they can stay inside the producing crate's OUT_DIR.
+    let mut staged = copy_libraries(&profile_dir, &stage)?;
     if staged == 0 {
-        // Nothing in the profile directory: either a cached build that pruned them, or
-        // a build where sherpa-rs-sys has not run. Put back whatever was staged
-        // earlier, so linking and `cargo run` both behave as on a clean checkout.
-        let restored = copy_libraries(&stage, &profile_dir)?;
-        println!("cargo:warning=restored {restored} native libraries from {STAGE_DIR}");
+        for out_dir in dependency_out_dirs(&profile_dir) {
+            staged += copy_libraries(&out_dir, &stage)?;
+        }
+    }
+    if staged == 0 {
+        // A cached build that pruned them, or one where sherpa-rs-sys has not run.
+        // Whatever was staged earlier is the source of truth.
+        staged = copy_libraries(&stage, &profile_dir)?;
+        println!("cargo:warning=restored {staged} native libraries from {STAGE_DIR}");
     }
 
+    // Put them everywhere an executable might look. `profile_dir` serves the app
+    // binary, `deps` serves the test binaries, and neither platform charges anything
+    // meaningful for the duplication.
+    copy_libraries(&stage, &profile_dir)?;
+    copy_libraries(&stage, &profile_dir.join("deps"))?;
+
     Ok(())
+}
+
+/// `OUT_DIR` of every dependency that has one, under `target/<profile>/build/`.
+///
+/// Searched because a crate is free to leave its native libraries there rather than
+/// copying them beside the profile binaries, and on Windows sherpa-onnx does.
+fn dependency_out_dirs(profile_dir: &Path) -> Vec<PathBuf> {
+    let build_dir = profile_dir.join("build");
+    let Ok(entries) = std::fs::read_dir(&build_dir) else {
+        return Vec::new();
+    };
+
+    entries
+        .filter_map(Result::ok)
+        .map(|entry| entry.path().join("out"))
+        .filter(|path| path.is_dir())
+        .collect()
 }
 
 /// Copy the native libraries from one directory to another, returning how many moved.
