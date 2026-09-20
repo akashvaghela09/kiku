@@ -82,9 +82,11 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           df -h / | tail -1
+          # Not /usr/local/lib/node_modules, which is where npm itself lives, and not
+          # the hosted tool cache, which holds the Node that setup-node just put there.
+          # Removing either leaves `npm ci` failing with exit code 127.
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
-                      /usr/local/share/boost /usr/local/lib/node_modules \
-                      "$AGENT_TOOLSDIRECTORY"
+                      /usr/local/share/boost
           sudo apt-get clean
           df -h / | tail -1
 
