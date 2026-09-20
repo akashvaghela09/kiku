@@ -211,7 +211,10 @@ mod tests {
         );
 
         let after = settle(&mut mapper, 0.005 * 20.0, WINDOW_SECONDS + 0.5);
-        assert_eq!(after, 0.0, "and become the floor once the window is full of it");
+        assert_eq!(
+            after, 0.0,
+            "and become the floor once the window is full of it"
+        );
     }
 
     /// The counterpart: a real voice keeps the meter alive for as long as it talks.

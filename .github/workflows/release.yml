@@ -73,6 +73,21 @@ jobs:
           # the cache as well.
           cache-directories: 'src-tauri/resources/lib'
 
+      # The ubuntu runner ships with about 14GB free, and this job fills it: a debug
+      # target tree for the tests, a release one for the bundle, and several copies of
+      # onnxruntime besides. It ran out during AppImage creation, which surfaced as the
+      # useless message "failed to run linuxdeploy" after a disk-space warning. None of
+      # these toolchains are used here.
+      - name: Free disk space
+        if: runner.os == 'Linux'
+        run: |
+          df -h / | tail -1
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /usr/local/share/boost /usr/local/lib/node_modules \
+                      "$AGENT_TOOLSDIRECTORY"
+          sudo apt-get clean
+          df -h / | tail -1
+
       - run: npm ci
 
       # Windows has no rpath: a binary resolves its DLLs from its own directory, and a
