@@ -44,7 +44,7 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Linux dependencies
         if: matrix.platform == 'ubuntu-22.04'
@@ -54,7 +54,7 @@ jobs:
             libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf \
             libasound2-dev build-essential curl wget file libssl-dev
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -66,6 +66,12 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
+          # sherpa-onnx's shared libraries are pruned from a cached target/ while
+          # cargo still believes the build script is fresh, which fails the link with
+          # "unable to find library -lonnxruntime". build.rs stages them here and
+          # restores them when target/ has lost them, so this directory has to survive
+          # the cache as well.
+          cache-directories: 'src-tauri/resources/lib'
 
       - run: npm ci
 
@@ -122,7 +128,7 @@ jobs:
 
       - name: Upload installers
         if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: kiku-${{ matrix.artifact }}
           retention-days: 30

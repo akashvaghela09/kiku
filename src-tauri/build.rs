@@ -10,6 +10,12 @@
 //! Copying them to a fixed directory first makes the resource path stable across
 //! profiles and platforms, and lets one configuration cover all three operating
 //! systems instead of three files listing different extensions.
+//!
+//! The copy also goes the other way. CI caches `target/`, and the cache prunes these
+//! libraries while leaving cargo convinced the build script is fresh - so a cache hit
+//! produced `unable to find library -lonnxruntime` at link time. Restoring them from
+//! the staging directory when the profile directory has lost them makes a cached
+//! build behave like a clean one, and the staging directory is itself cached.
 
 use std::path::{Path, PathBuf};
 
@@ -44,12 +50,35 @@ fn stage_libraries() -> std::io::Result<()> {
         std::fs::write(&placeholder, b"")?;
     }
 
+    // Always offer the staging directory to the linker. On a cached build the profile
+    // directory may no longer hold these libraries, and this is where they survive.
+    println!("cargo:rustc-link-search=native={}", stage.display());
+
     let Some(profile_dir) = cargo_profile_dir() else {
         return Ok(());
     };
-    println!("cargo:rerun-if-changed={}", profile_dir.display());
 
-    for entry in std::fs::read_dir(&profile_dir)? {
+    let staged = copy_libraries(&profile_dir, &stage)?;
+    if staged == 0 {
+        // Nothing in the profile directory: either a cached build that pruned them, or
+        // a build where sherpa-rs-sys has not run. Put back whatever was staged
+        // earlier, so linking and `cargo run` both behave as on a clean checkout.
+        let restored = copy_libraries(&stage, &profile_dir)?;
+        println!("cargo:warning=restored {restored} native libraries from {STAGE_DIR}");
+    }
+
+    Ok(())
+}
+
+/// Copy the native libraries from one directory to another, returning how many moved.
+fn copy_libraries(from: &Path, to: &Path) -> std::io::Result<usize> {
+    if !from.is_dir() {
+        return Ok(0);
+    }
+    std::fs::create_dir_all(to)?;
+
+    let mut copied = 0;
+    for entry in std::fs::read_dir(from)? {
         let entry = entry?;
         let name = entry.file_name().to_string_lossy().into_owned();
 
@@ -58,11 +87,11 @@ fn stage_libraries() -> std::io::Result<()> {
                 && (name.contains(".so") || name.ends_with(".dylib") || name.ends_with(".dll")));
 
         if wanted && entry.path().is_file() {
-            std::fs::copy(entry.path(), stage.join(&name))?;
+            std::fs::copy(entry.path(), to.join(&name))?;
+            copied += 1;
         }
     }
-
-    Ok(())
+    Ok(copied)
 }
 
 /// `target/<profile>/`, derived from `OUT_DIR`.
@@ -75,6 +104,3 @@ fn cargo_profile_dir() -> Option<PathBuf> {
     let profile = out_dir.parent()?.parent()?.parent()?;
     profile.is_dir().then(|| profile.to_path_buf())
 }
-
-#[allow(dead_code)]
-fn unused(_: &Path) {}
