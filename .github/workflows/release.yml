@@ -10,11 +10,14 @@ name: Build
 #
 # Nothing here publishes on its own: a tagged release is created as a draft, so
 # publishing stays a decision a person makes.
-# Tags and manual runs only. This matrix bills macOS minutes at 10x and Windows at
-# 2x, so running it on every push to master cost more in a day than a month's free
-# allowance. CI still runs on every push and covers the checks; this workflow exists
-# to produce installers, which is a thing you ask for rather than a thing that should
-# happen because you pushed a README fix.
+# Tags and manual runs only.
+#
+# Not for cost: the repository is public, so Actions minutes are free. For signal. A
+# twenty-five minute three-platform build on every push buries the checks that
+# actually catch things, and the failures worth knowing about are found by CI in a
+# fraction of the time. Producing installers is something you ask for, with a tag or
+# with "Run workflow", rather than something that happens because a README was
+# edited.
 on:
   push:
     tags: ['v*']
@@ -175,35 +178,6 @@ jobs:
           if [ "$RUNNER_OS" != "Windows" ]; then
             cargo test --lib
           fi
-
-      # STATUS_ENTRYPOINT_NOT_FOUND names a real DLL missing a real export, and the
-      # libraries are demonstrably already beside the binary, so placement is not the
-      # cause. This prints both sides of the import table once so the next change is
-      # informed rather than another guess. Remove it once the cause is known.
-      - name: Diagnose the Windows loader failure
-        if: runner.os == 'Windows'
-        shell: pwsh
-        continue-on-error: true
-        working-directory: src-tauri
-        run: |
-          cargo test --no-run 2>&1 | Select-Object -Last 5
-          Copy-Item target\debug\*.dll target\debug\deps\ -Force -ErrorAction SilentlyContinue
-          "== DLLs beside the test binary"
-          Get-ChildItem target\debug\deps\*.dll | Select-Object Name, Length
-          if (Test-Path C:\Windows\System32\onnxruntime.dll) {
-            "== System32 ALSO has onnxruntime.dll"
-            (Get-Item C:\Windows\System32\onnxruntime.dll).VersionInfo | Format-List FileVersion, ProductVersion
-          } else { "== System32 has no onnxruntime.dll" }
-          $dumpbin = Get-ChildItem "C:\Program Files\Microsoft Visual Studio\*\*\VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
-          $exe = Get-ChildItem target\debug\deps\kiku_lib-*.exe | Select-Object -First 1
-          if ($dumpbin -and $exe) {
-            "== what the test binary depends on"
-            & $dumpbin /DEPENDENTS $exe.FullName
-            "== what sherpa-onnx-c-api.dll depends on"
-            & $dumpbin /DEPENDENTS target\debug\deps\sherpa-onnx-c-api.dll
-            "== symbols it imports from onnxruntime"
-            & $dumpbin /IMPORTS target\debug\deps\sherpa-onnx-c-api.dll | Select-String -Pattern 'onnxruntime' -Context 0,25
-          } else { "dumpbin or test exe not found" }
 
       # Tagged: attach to a draft release.
       - name: Bundle and draft a release

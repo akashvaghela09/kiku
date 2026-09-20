@@ -196,11 +196,20 @@ differs, which is what stops a stale copy from quietly compiling.
 
 ## Continuous integration
 
-Every push runs the checks: lint, types, formatting, clippy and the test suite.
+Two workflows, split by what they are for.
 
-Installers are built only when a `v*` tag is pushed, or when the workflow is started
-by hand. That build runs on all three platforms and attaches the results to a **draft**
-release, so publishing stays a decision rather than a side effect of pushing.
+**CI** runs on every push and pull request. On Linux it checks formatting, lint, types,
+clippy and the test suite, and rebuilds `bindings.ts` to prove the committed copy is
+current. It then compiles on Windows and macOS as well, without linking or running
+anything, because a module can be perfectly valid on Linux and dead code on the other
+two, and that is not something a Linux machine can tell you.
+
+**Release** runs only on a `v*` tag or a manual dispatch. It builds installers on all
+three platforms and attaches them to a **draft** release, so publishing stays a
+decision rather than a side effect of pushing. It does not cache `target/`: a restored
+build directory lets cargo treat the native dependency's build script as fresh while
+the libraries it extracted are gone, which fails the link in a way that takes a long
+time to recognise. A release is built from clean on purpose.
 
 ## Under the hood
 

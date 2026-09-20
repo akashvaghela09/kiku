@@ -66,3 +66,44 @@ jobs:
           cargo fmt --check
           cargo clippy --all-targets -- -D warnings
           cargo test --lib
+
+  # Compiling on the other two platforms, without linking, running or bundling
+  # anything.
+  #
+  # This exists because of a specific failure: a module whose only callers were
+  # `#[cfg(target_os = "linux")]` was itself compiled everywhere, so it was dead code
+  # on macOS and Windows and `-D warnings` rejected it. Nothing on a Linux machine can
+  # see that, and it was only found by a release build twenty-five minutes into a tag.
+  #
+  # `cargo clippy` runs build scripts but never links a binary or executes one, so it
+  # catches that whole class in a few minutes and is immune to the loader problems that
+  # make running tests on Windows impractical.
+  cross-check:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2025
+            sherpa-cache: ~\AppData\Local\sherpa-rs
+          - os: macos-14
+            sherpa-cache: ~/Library/Caches/sherpa-rs
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+          # Registry only. A restored target/ lets cargo treat sherpa-rs-sys's build
+          # script as fresh while the archive it extracted is gone, and the link then
+          # fails on a library that is no longer where the search path says it is.
+          cache-targets: false
+          cache-directories: ${{ matrix.sherpa-cache }}
+
+      - name: Clippy
+        working-directory: src-tauri
+        run: cargo clippy --all-targets -- -D warnings
