@@ -20,11 +20,17 @@ use std::collections::VecDeque;
 /// How much louder than the noise floor a sound must be before it registers.
 ///
 /// Below this the waveform stays flat. Room tone, a fan, and a keyboard all sit within
-/// a few decibels of the floor; a voice does not.
-const MARGIN_DB: f32 = 9.0;
+/// a few decibels of the floor; a voice does not. Six rather than nine, because nine
+/// asked a quiet voice to shout before the meter acknowledged it at all, while still
+/// leaving twice the headroom a chair creak or a fan spinning up occupies.
+const MARGIN_DB: f32 = 6.0;
 
 /// Decibels above the floor that count as a full-height bar.
-const SPAN_DB: f32 = 24.0;
+///
+/// Speaking normally spans perhaps 20dB above the floor, so asking for 24 meant an
+/// ordinary voice never reached even three quarters of the range and the marks barely
+/// moved.
+const SPAN_DB: f32 = 20.0;
 
 /// Silence, for the purposes of a logarithm.
 const SILENCE_DB: f32 = -90.0;

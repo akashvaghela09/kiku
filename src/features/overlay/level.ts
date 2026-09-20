@@ -11,11 +11,12 @@
  * One step of VU-style smoothing: fast attack, slow release.
  *
  * Rising quickly and falling slowly is the standard meter ballistic, and the reason a
- * good meter reads as responsive rather than twitchy. Roughly three frames to rise and
- * nine to fall at 60fps.
+ * good meter reads as responsive rather than twitchy. About two frames to rise and
+ * five to fall at 60fps; slower than this and the marks lag behind the voice, which
+ * reads as the meter ignoring you rather than as smoothness.
  */
 export function smooth(current: number, target: number): number {
-  const rate = target > current ? 0.55 : 0.14;
+  const rate = target > current ? 0.7 : 0.22;
   return current + (target - current) * rate;
 }
 
@@ -59,7 +60,7 @@ export const RENDER_EASE = 0.5;
  * meter looks inert. Below 1 this lifts the middle without touching either end - the
  * floor stays flat during silence, and a shout still reaches full height.
  */
-const SHAPE = 0.7;
+const SHAPE = 0.65;
 
 /**
  * Height of one mark in pixels.

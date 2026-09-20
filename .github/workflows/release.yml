@@ -10,9 +10,13 @@ name: Build
 #
 # Nothing here publishes on its own: a tagged release is created as a draft, so
 # publishing stays a decision a person makes.
+# Tags and manual runs only. This matrix bills macOS minutes at 10x and Windows at
+# 2x, so running it on every push to master cost more in a day than a month's free
+# allowance. CI still runs on every push and covers the checks; this workflow exists
+# to produce installers, which is a thing you ask for rather than a thing that should
+# happen because you pushed a README fix.
 on:
   push:
-    branches: [master, main]
     tags: ['v*']
   workflow_dispatch:
 
