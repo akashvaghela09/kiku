@@ -1,9 +1,27 @@
 name: CI
 
+# Skipped entirely when a push touches nothing that can break a build. A README
+# rewrite or a new screenshot cannot fail clippy, and a run that cannot fail teaches
+# you to ignore the ones that can.
+#
+# Two more escape hatches for the same reason: putting `[skip ci]` in a commit message
+# skips a run outright, and pushing again while one is still going cancels it rather
+# than queueing a second.
 on:
   push:
     branches: [main, master]
+    paths-ignore: &docs
+      - '**/*.md'
+      - 'docs/**'
+      - 'assets/**'
+      - 'LICENSE'
+      - '.gitignore'
   pull_request:
+    paths-ignore: *docs
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 # Every step below runs several commands. GitHub's default shell on Windows is pwsh,
 # which propagates only the LAST command's exit code, so `cargo test` could crash and

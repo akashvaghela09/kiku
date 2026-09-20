@@ -204,7 +204,8 @@ current. It then compiles on Windows and macOS as well, without linking or runni
 anything, because a module can be perfectly valid on Linux and dead code on the other
 two, and that is not something a Linux machine can tell you.
 
-**Release** runs only on a `v*` tag or a manual dispatch. It builds installers on all
+**Release** runs only on a `v*` tag or a manual dispatch. The steps are in
+[`docs/RELEASING.md`](docs/RELEASING.md). It builds installers on all
 three platforms and attaches them to a **draft** release, so publishing stays a
 decision rather than a side effect of pushing. It does not cache `target/`: a restored
 build directory lets cargo treat the native dependency's build script as fresh while
@@ -221,8 +222,9 @@ time to recognise. A release is built from clean on purpose.
 | Audio | 16 kHz mono capture, anti aliased resampling, adaptive noise floor |
 
 The reasoning behind the bigger decisions lives in [`docs/`](docs/): `SCOPE.md` for what
-Kiku is and is not, `DESIGN.md` for the interface, `PLAN.md` for how it was built, and
-`CHUNK-0-RESULTS.md` for the measurements that chose the engine.
+Kiku is and is not, `DESIGN.md` for the interface, `PLAN.md` for how it was built,
+`CHUNK-0-RESULTS.md` for the measurements that chose the engine, and
+[`RELEASING.md`](docs/RELEASING.md) for how a release is cut.
 
 ## Attribution
 
