@@ -150,6 +150,12 @@ build script emits.
 
 ## Sound feedback
 
+Lives in `src-tauri/src/feedback/`, named for its purpose rather than its medium.
+`audio/` is sound coming **in** from the microphone; `feedback/` is sound going **out**
+to the speakers. They share nothing but the cpal dependency — opposite stream
+directions, different sample rates, and different resamplers, because aliasing matters
+for speech and not for a 0.3 s blip.
+
 Two recorded cues, supplied by the owner and embedded in the binary with
 `include_bytes!` — no path to resolve, no difference between `cargo run` and an
 installed bundle, and no way for one to go missing:

@@ -1,7 +1,9 @@
-//! Short cues marking the start and end of a dictation.
+//! Audio going **out**: the short cues marking the start and end of a dictation.
 //!
-//! Two are recorded assets embedded in the binary; the rare failure cue is generated.
-//! See `cue` for why.
+//! All three live in `assets/sounds/` and are embedded in the binary. Audio coming
+//! **in** — the microphone — is `crate::audio`, which shares nothing with this but the
+//! cpal dependency: opposite stream direction, a different sample rate, and a
+//! different resampler, because aliasing matters for speech and not for a blip.
 
 mod cue;
 mod player;

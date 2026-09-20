@@ -1,6 +1,6 @@
 //! Plays each cue in turn so the audio path can be checked by listening — or, in CI,
 //! by recording the output device. Ignored by default.
-use kiku_lib::sound::{play, Cue};
+use kiku_lib::feedback::{play, Cue};
 use std::{thread::sleep, time::Duration};
 
 #[test]

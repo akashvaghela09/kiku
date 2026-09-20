@@ -5,12 +5,12 @@
 #[test]
 #[ignore = "rewrites a committed asset"]
 fn write_error_wav() {
-    let samples = kiku_lib::sound::render_error_cue();
+    let samples = kiku_lib::feedback::render_error_cue();
     let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../assets/sounds/error.wav");
 
     let spec = hound::WavSpec {
         channels: 1,
-        sample_rate: kiku_lib::sound::SAMPLE_RATE,
+        sample_rate: kiku_lib::feedback::SAMPLE_RATE,
         bits_per_sample: 16,
         sample_format: hound::SampleFormat::Int,
     };

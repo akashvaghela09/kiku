@@ -14,10 +14,10 @@ use crate::audio::Level;
 use crate::audio::{self, MicrophoneInfo};
 use crate::dictation::{DictationState, Discarded};
 use crate::error::{CommandResult, Error};
+use crate::feedback::{self, Cue};
 use crate::history::Page;
 use crate::hotkeys::{Hotkey, HotkeyBindings};
 use crate::models::{self, DownloadProgress, InstallState};
-use crate::sound::{self, Cue};
 use crate::state::{AppState, Preferences};
 use crate::update::{self, UpdateStatus};
 
@@ -301,7 +301,7 @@ pub fn preview_sound(cue: SoundCue) -> CommandResult<()> {
         SoundCue::Pasted => Cue::Pasted,
         SoundCue::Error => Cue::Error,
     };
-    sound::play(cue, true);
+    feedback::play(cue, true);
     Ok(())
 }
 

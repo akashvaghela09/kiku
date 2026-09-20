@@ -11,13 +11,13 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 use tauri_specta::Event;
 
 use crate::dictation::{DictationState, Outcome};
+use crate::feedback::{self, Cue};
 use crate::hotkeys::{
     HotkeyAction, HotkeyBindings, Interpreter, KeyWatcher, TapOutcome, Thresholds,
 };
 use crate::ipc::{DictationDiscarded, DictationStateChanged, LevelMeasured, TranscriptProduced};
 use crate::output::{self, Delivery};
 use crate::overlay;
-use crate::sound::{self, Cue};
 use crate::state::AppState;
 
 /// Install the dictation hotkeys and route them into a session.
@@ -192,7 +192,7 @@ fn start(app: &AppHandle) {
 
     match result {
         Ok(()) => {
-            sound::play(Cue::Listening, state.preferences().sounds);
+            feedback::play(Cue::Listening, state.preferences().sounds);
             grab_escape(app);
             show_overlay(app);
             publish_state(app, DictationState::Listening);
@@ -226,7 +226,7 @@ fn stop(app: &AppHandle) {
             }
             Ok(Outcome::Discarded(reason)) => {
                 tracing::debug!(?reason, "dictation produced no text");
-                sound::play(Cue::Error, state.preferences().sounds);
+                feedback::play(Cue::Error, state.preferences().sounds);
                 let _ = DictationDiscarded(reason).emit(&app);
             }
             Err(error) => {
@@ -257,15 +257,15 @@ fn deliver(app: &AppHandle, transcript: crate::asr::Transcript) {
         // a refused paste is not a failed dictation.
         Ok(Delivery::Pasted) => {
             tracing::debug!("transcript pasted");
-            sound::play(Cue::Pasted, preferences.sounds);
+            feedback::play(Cue::Pasted, preferences.sounds);
         }
         Ok(Delivery::CopiedOnly) => {
             tracing::info!("transcript copied but not pasted");
-            sound::play(Cue::Pasted, preferences.sounds);
+            feedback::play(Cue::Pasted, preferences.sounds);
         }
         Err(error) => {
             tracing::error!(%error, "could not deliver the transcript");
-            sound::play(Cue::Error, preferences.sounds);
+            feedback::play(Cue::Error, preferences.sounds);
             let _ = app.emit("dictation-error", error.to_string());
         }
     }

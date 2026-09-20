@@ -8,12 +8,12 @@ pub mod asr;
 pub mod audio;
 pub mod dictation;
 pub mod error;
+pub mod feedback;
 pub mod history;
 pub mod hotkeys;
 pub mod models;
 pub mod output;
 pub mod overlay;
-pub mod sound;
 pub mod state;
 pub mod update;
 
