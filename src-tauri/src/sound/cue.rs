@@ -1,23 +1,20 @@
 //! The feedback cues and where their audio comes from.
 //!
-//! The two cues a user hears constantly — listening started, text delivered — are
-//! recorded assets, embedded in the binary with `include_bytes!`. Embedding rather
-//! than shipping files alongside means there is no path to resolve, no difference
-//! between running from `cargo` and running from an installed bundle, and no way for
-//! a cue to go missing.
+//! All three are 48 kHz mono WAV files in `assets/sounds/`, embedded in the binary
+//! with `include_bytes!`. Embedding rather than shipping files alongside means there
+//! is no path to resolve, no difference between running from `cargo` and running from
+//! an installed bundle, and no way for a cue to go missing.
 //!
-//! The failure cue is still synthesised. It is a different kind of event and is heard
-//! rarely, so it does not need to be designed, and generating it keeps the bundle
-//! smaller for a sound nobody wants to hear twice.
+//! Two are recordings. The third, the failure cue, is generated — but generated
+//! *once*, by `cargo test render_error_cue -- --ignored`, and committed like the
+//! others. Keeping it a file rather than rendering it at runtime means every cue loads
+//! by the same path, and it can be listened to without running the application.
 
-use std::borrow::Cow;
 use std::io::Cursor;
 use std::sync::OnceLock;
 
-use super::tone;
-
-/// 48 kHz mono, matching the synthesised cues so both share one playback path.
-const ASSET_SAMPLE_RATE: u32 = 48_000;
+/// Every cue is 48 kHz mono, so playback never has to branch on the source.
+pub const SAMPLE_RATE: u32 = 48_000;
 
 const LISTENING_WAV: &[u8] = include_bytes!(concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -26,6 +23,10 @@ const LISTENING_WAV: &[u8] = include_bytes!(concat!(
 const PASTED_WAV: &[u8] = include_bytes!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../assets/sounds/pasted.wav"
+));
+const ERROR_WAV: &[u8] = include_bytes!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../assets/sounds/error.wav"
 ));
 
 /// Which moment a cue marks.
@@ -40,36 +41,35 @@ pub enum Cue {
 }
 
 impl Cue {
-    /// Sample rate the cue's audio is in.
-    pub fn sample_rate(self) -> u32 {
-        match self {
-            Self::Listening | Self::Pasted => ASSET_SAMPLE_RATE,
-            Self::Error => tone::SAMPLE_RATE,
-        }
-    }
-
-    /// Mono f32 samples for the cue.
+    /// Mono f32 samples at [`SAMPLE_RATE`].
     ///
-    /// Assets are decoded once and kept: a cue plays several times a minute, and
-    /// re-parsing a WAV header each time would be wasted work on the path where
-    /// latency is most noticeable.
-    pub fn samples(self) -> Cow<'static, [f32]> {
+    /// Decoded once and kept: a cue plays several times a minute, and re-parsing a WAV
+    /// header each time would be wasted work on the path where latency is most
+    /// noticeable.
+    pub fn samples(self) -> &'static [f32] {
         match self {
-            Self::Listening => Cow::Borrowed(listening()),
-            Self::Pasted => Cow::Borrowed(pasted()),
-            Self::Error => Cow::Owned(tone::render_error()),
+            Self::Listening => cached(&LISTENING, LISTENING_WAV, "listening"),
+            Self::Pasted => cached(&PASTED, PASTED_WAV, "pasted"),
+            Self::Error => cached(&ERROR, ERROR_WAV, "error"),
+        }
+    }
+
+    /// The file this cue is loaded from, for logs and documentation.
+    pub fn file_name(self) -> &'static str {
+        match self {
+            Self::Listening => "listening.wav",
+            Self::Pasted => "pasted.wav",
+            Self::Error => "error.wav",
         }
     }
 }
 
-fn listening() -> &'static [f32] {
-    static CACHE: OnceLock<Vec<f32>> = OnceLock::new();
-    CACHE.get_or_init(|| decode(LISTENING_WAV, "listening"))
-}
+static LISTENING: OnceLock<Vec<f32>> = OnceLock::new();
+static PASTED: OnceLock<Vec<f32>> = OnceLock::new();
+static ERROR: OnceLock<Vec<f32>> = OnceLock::new();
 
-fn pasted() -> &'static [f32] {
-    static CACHE: OnceLock<Vec<f32>> = OnceLock::new();
-    CACHE.get_or_init(|| decode(PASTED_WAV, "pasted"))
+fn cached(slot: &'static OnceLock<Vec<f32>>, bytes: &'static [u8], name: &str) -> &'static [f32] {
+    slot.get_or_init(|| decode(bytes, name))
 }
 
 /// Decode an embedded 16-bit mono WAV.
@@ -87,7 +87,7 @@ fn decode(bytes: &'static [u8], name: &str) -> Vec<f32> {
     };
 
     let spec = reader.spec();
-    if spec.channels != 1 || spec.sample_rate != ASSET_SAMPLE_RATE {
+    if spec.channels != 1 || spec.sample_rate != SAMPLE_RATE {
         tracing::error!(
             cue = name,
             channels = spec.channels,
@@ -120,7 +120,7 @@ mod tests {
     #[test]
     fn every_cue_is_short_enough_not_to_delay_speaking() {
         for cue in ALL {
-            let seconds = cue.samples().len() as f32 / cue.sample_rate() as f32;
+            let seconds = cue.samples().len() as f32 / SAMPLE_RATE as f32;
             assert!((0.05..=0.60).contains(&seconds), "{cue:?} lasts {seconds}s");
         }
     }
@@ -137,16 +137,40 @@ mod tests {
     }
 
     #[test]
-    fn the_recorded_assets_are_at_the_expected_rate() {
-        assert_eq!(Cue::Listening.sample_rate(), ASSET_SAMPLE_RATE);
-        assert_eq!(Cue::Pasted.sample_rate(), ASSET_SAMPLE_RATE);
+    fn every_cue_names_a_distinct_file() {
+        let mut names: Vec<_> = ALL.iter().map(|cue| cue.file_name()).collect();
+        names.sort_unstable();
+        let count = names.len();
+        names.dedup();
+        assert_eq!(names.len(), count, "two cues share a file");
+    }
+
+    #[test]
+    fn no_cue_is_wildly_louder_than_the_others() {
+        // Peak is a poor guide: a sustained tone at the same peak as a short transient
+        // sounds several times louder, so this compares RMS.
+        let rms = |cue: Cue| {
+            let samples = cue.samples();
+            (samples.iter().map(|s| s * s).sum::<f32>() / samples.len() as f32).sqrt()
+        };
+        let levels: Vec<f32> = ALL.iter().map(|&cue| rms(cue)).collect();
+        let quietest = levels.iter().cloned().fold(f32::INFINITY, f32::min);
+        let loudest = levels.iter().cloned().fold(0.0f32, f32::max);
+        assert!(
+            loudest / quietest < 4.0,
+            "cue levels are out of step: {levels:?}"
+        );
     }
 
     #[test]
     fn decoding_is_cached_rather_than_repeated() {
-        // Same slice both times means the OnceLock is doing its job.
-        assert!(std::ptr::eq(listening(), listening()));
-        assert!(std::ptr::eq(pasted(), pasted()));
+        // The same slice both times means the OnceLock is doing its job.
+        for cue in ALL {
+            assert!(
+                std::ptr::eq(cue.samples(), cue.samples()),
+                "{cue:?} re-decoded"
+            );
+        }
     }
 
     #[test]

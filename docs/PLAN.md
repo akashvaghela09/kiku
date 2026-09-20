@@ -161,12 +161,13 @@ Converted from the originals in `assets/sounds/source/` to 48 kHz mono and scale
 common factor: peak 0.86 is hot for a cue heard dozens of times a day, and one factor
 preserves the designed relationship between them.
 
-A third cue — a dictation that produced nothing — is generated in `sound/tone.rs`
-rather than recorded. It marks a rare event, so it does not need designing, and
-generating it keeps a sound nobody wants to hear twice out of the bundle. Its level was
-set by measuring the output rather than by eye: a sustained tone reads far louder than
-a short transient at the same peak, and it was initially about four times the recorded
-cues' RMS.
+A third cue — a dictation that produced nothing — has no recording, so it is
+synthesised. But it is synthesised *once*: `cargo test render_error_cue -- --ignored`
+writes `assets/sounds/error.wav`, which is committed and then loaded exactly like the
+two recordings. That keeps every cue on one code path and makes the failure sound
+listenable without running the application. Its level was set by measuring the output
+rather than by eye — a sustained tone reads far louder than a short transient at the
+same peak, and it was initially about four times the recordings' RMS.
 
 The toggle shortcut plays each cue at most once — listening on the first press, pasted
 when the text lands, and nothing on the second press. All of it is switchable off in

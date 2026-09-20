@@ -1,8 +1,9 @@
-//! Generating the failure cue.
+//! The generator behind `assets/sounds/error.wav`.
 //!
-//! The two cues heard constantly are recorded assets (see `cue`). This one is
-//! synthesised: it marks a rare event, so it does not need to be designed, and
-//! generating it keeps a sound nobody wants to hear twice out of the bundle.
+//! The failure cue has no recording, so it is synthesised — but only once. Running
+//! `cargo test render_error_cue -- --ignored` writes this out to the asset, which is
+//! then committed and loaded exactly like the two recorded cues. Nothing here runs
+//! during a dictation.
 //!
 //! The envelope is the part that matters. A sine starting at full amplitude produces
 //! an audible click, because the speaker cone is asked to jump instantaneously, and

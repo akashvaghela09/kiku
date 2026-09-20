@@ -16,7 +16,7 @@ use std::time::Duration;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::SampleFormat;
 
-use super::cue::Cue;
+use super::cue::{Cue, SAMPLE_RATE};
 
 /// Play a cue on the default output device, returning immediately.
 pub fn play(cue: Cue) {
@@ -42,8 +42,8 @@ fn play_blocking(cue: Cue) -> Result<(), String> {
 
     let channels = usize::from(config.channels());
     let samples = Arc::new(resample_to(
-        cue.samples().into_owned(),
-        cue.sample_rate(),
+        cue.samples().to_vec(),
+        SAMPLE_RATE,
         config.sample_rate(),
     ));
     let cursor = Arc::new(AtomicUsize::new(0));
@@ -144,15 +144,15 @@ mod tests {
 
     #[test]
     fn a_matching_rate_is_passed_through_untouched() {
-        let samples = Cue::Listening.samples().into_owned();
-        let rate = Cue::Listening.sample_rate();
+        let samples = Cue::Listening.samples().to_vec();
+        let rate = SAMPLE_RATE;
         assert_eq!(resample_to(samples.clone(), rate, rate), samples);
     }
 
     #[test]
     fn resampling_scales_the_length_by_the_rate_ratio() {
-        let samples = Cue::Listening.samples().into_owned();
-        let from = Cue::Listening.sample_rate();
+        let samples = Cue::Listening.samples().to_vec();
+        let from = SAMPLE_RATE;
         let converted = resample_to(samples.clone(), from, 44_100);
         let expected = samples.len() as f64 * 44_100.0 / f64::from(from);
         assert!((converted.len() as f64 - expected).abs() < 2.0);
@@ -161,8 +161,8 @@ mod tests {
     #[test]
     fn resampling_preserves_the_duration_in_seconds() {
         for cue in [Cue::Listening, Cue::Pasted, Cue::Error] {
-            let from = cue.sample_rate();
-            let original = cue.samples().into_owned();
+            let from = SAMPLE_RATE;
+            let original = cue.samples().to_vec();
             let original_seconds = original.len() as f32 / from as f32;
 
             for rate in [22_050, 44_100, 48_000, 96_000] {

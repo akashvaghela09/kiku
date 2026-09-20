@@ -8,6 +8,10 @@ mod player;
 mod tone;
 
 pub use cue::Cue;
+pub use tone::SAMPLE_RATE;
+
+/// Exposed so the one-off generator test can re-render `assets/sounds/error.wav`.
+pub use tone::render_error as render_error_cue;
 
 /// Play a cue, unless the user has turned sounds off.
 ///
