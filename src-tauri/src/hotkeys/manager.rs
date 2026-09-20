@@ -1,20 +1,18 @@
-//! Registering the dictation hotkeys and interpreting what they mean.
+//! Interpreting what the dictation hotkeys mean.
 //!
-//! The interesting logic — hold versus toggle, and swallowing the key-repeat events
-//! some platforms emit while a shortcut is held — lives in [`Interpreter`], which is
-//! pure and therefore testable without an operating system. Registration is thin glue
-//! around the Tauri plugin.
+//! Hold versus toggle, and swallowing the key-repeat events some platforms emit while
+//! a shortcut is held, both live in [`Interpreter`] — which is pure, and therefore
+//! testable without an operating system. Registering the shortcuts with the platform
+//! is `runtime`'s job, because that needs an `AppHandle` and this does not.
 
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
 use specta::Type;
-use tauri::{AppHandle, Runtime};
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
+use tauri_plugin_global_shortcut::{Shortcut, ShortcutState};
 
 use super::binding::{Hotkey, DEFAULT_HOLD, DEFAULT_TOGGLE};
-use crate::error::{Error, Result};
+use crate::error::Result;
 
 /// What the user meant by a key event.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -91,83 +89,6 @@ impl Interpreter {
     /// the key coming up, so the next press is not swallowed.
     pub fn reset(&self) {
         self.holding.store(false, Ordering::SeqCst);
-    }
-}
-
-/// Owns the currently registered bindings.
-pub struct HotkeyManager {
-    bindings: Mutex<HotkeyBindings>,
-}
-
-impl Default for HotkeyManager {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl HotkeyManager {
-    pub fn new() -> Self {
-        Self {
-            bindings: Mutex::new(HotkeyBindings::default()),
-        }
-    }
-
-    pub fn bindings(&self) -> HotkeyBindings {
-        self.bindings
-            .lock()
-            .map(|bindings| bindings.clone())
-            .unwrap_or_default()
-    }
-
-    /// Register `next`, rolling back to the previous bindings if it fails.
-    ///
-    /// Registration fails when another application already owns the combination —
-    /// `Alt+Space`, a tempting choice, is the window menu on Windows and on several
-    /// Linux desktops. A rebinding attempt must never leave the user with no working
-    /// hotkey, so the old pair goes back on failure.
-    pub fn apply<R: Runtime>(&self, app: &AppHandle<R>, next: HotkeyBindings) -> Result<()> {
-        let previous = self.bindings();
-        self.unregister(app, &previous);
-
-        match self.register(app, &next) {
-            Ok(()) => {
-                if let Ok(mut current) = self.bindings.lock() {
-                    *current = next;
-                }
-                Ok(())
-            }
-            Err(error) => {
-                if let Err(rollback) = self.register(app, &previous) {
-                    tracing::error!(%rollback, "could not restore the previous hotkeys");
-                }
-                Err(error)
-            }
-        }
-    }
-
-    fn register<R: Runtime>(&self, app: &AppHandle<R>, bindings: &HotkeyBindings) -> Result<()> {
-        let shortcuts = app.global_shortcut();
-
-        for (hotkey, role) in [(&bindings.hold, "hold"), (&bindings.toggle, "toggle")] {
-            let shortcut = hotkey.shortcut()?;
-            shortcuts.register(shortcut).map_err(|error| {
-                tracing::warn!(%error, spec = %hotkey.spec, role, "could not register hotkey");
-                Error::HotkeyTaken(hotkey.display.clone())
-            })?;
-        }
-
-        Ok(())
-    }
-
-    fn unregister<R: Runtime>(&self, app: &AppHandle<R>, bindings: &HotkeyBindings) {
-        let shortcuts = app.global_shortcut();
-        for hotkey in [&bindings.hold, &bindings.toggle] {
-            if let Ok(shortcut) = hotkey.shortcut() {
-                // Unregistering something that was never registered is not an error
-                // worth surfacing — it is the normal case on first run.
-                let _ = shortcuts.unregister(shortcut);
-            }
-        }
     }
 }
 

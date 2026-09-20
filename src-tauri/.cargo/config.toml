@@ -3,15 +3,30 @@
 # binary fails to start unless LD_LIBRARY_PATH happens to be set.
 #
 # Static linking is not an alternative: the prebuilt download contains shared objects
-# only, and enabling sherpa-rs's `static` feature additionally requires disabling PIE.
-# See docs/CHUNK-0-RESULTS.md.
+# only, and enabling sherpa-rs's `static` feature additionally requires disabling PIE
+# and then still fails to link. See docs/CHUNK-0-RESULTS.md.
 #
-# `$ORIGIN` (Linux) and `@loader_path` (macOS) both mean "the directory holding this
-# executable", which is where Tauri's bundler puts the libraries too. Windows resolves
-# DLLs from the executable's directory already and needs nothing here.
+# Two entries are needed because the libraries sit in different places at different
+# times. `$ORIGIN` covers `cargo run` and `tauri dev`, where they are beside the
+# binary in `target/`. The second covers an installed bundle, where Tauri places
+# resources in a directory next to the executable's.
+#
+# Windows resolves DLLs from the executable's own directory already and needs nothing.
 
 [target.'cfg(target_os = "linux")']
-rustflags = ["-C", "link-arg=-Wl,-rpath,$ORIGIN"]
+rustflags = [
+    "-C",
+    "link-arg=-Wl,-rpath,$ORIGIN",
+    "-C",
+    "link-arg=-Wl,-rpath,$ORIGIN/../lib/Kiku/lib",
+    "-C",
+    "link-arg=-Wl,-rpath,$ORIGIN/../lib",
+]
 
 [target.'cfg(target_os = "macos")']
-rustflags = ["-C", "link-arg=-Wl,-rpath,@loader_path"]
+rustflags = [
+    "-C",
+    "link-arg=-Wl,-rpath,@loader_path",
+    "-C",
+    "link-arg=-Wl,-rpath,@executable_path/../Resources/lib",
+]

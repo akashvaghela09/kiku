@@ -129,9 +129,22 @@ error, because a failed update check is not worth interrupting anyone about · t
 version comparison is separated from the fetch so it is tested without a network.
 Banner UI lands in chunk 10.
 
-## Chunk 12 — Packaging · `TODO`
-AppImage + deb · MSI/NSIS · dmg (aarch64, ad-hoc signed) · GitHub Actions release ·
-README with Gatekeeper/SmartScreen instructions · NVIDIA model attribution.
+## Chunk 12 — Packaging · `DONE` (Linux verified; Windows and macOS untested)
+The sherpa-onnx shared libraries ship as bundle resources, listed per platform, with
+rpath entries covering both `cargo run` and an installed layout · **verified on
+Linux**: the deb places the binary at `/usr/bin/kiku` and the libraries at
+`/usr/lib/Kiku/lib`, and both the deb and the AppImage start, resolve every library
+and load the speech model · CI runs lint, typecheck, clippy and tests on every push ·
+release is tag-driven and drafts a GitHub release for all three platforms · README
+covers the Gatekeeper and SmartScreen prompts that an unsigned build produces.
+
+**Untested:** the Windows and macOS bundles. The configuration is written and the
+matrix builds them, but neither has been run. The likely trouble spots are the macOS
+`@executable_path/../Resources/lib` rpath and whether the DLL names match what the
+build script emits.
+
+**Known cosmetic issue:** linuxdeploy copies the libraries a second time into
+`/usr/lib`, so the AppImage carries about 21 MB it does not need.
 
 ---
 

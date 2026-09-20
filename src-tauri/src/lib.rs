@@ -105,6 +105,8 @@ pub fn run() {
                 tracing::warn!(%error, "dictation hotkeys are unavailable");
             }
 
+            apply_retention(app.handle());
+
             load_model_in_background(app.handle().clone());
 
             if let Some(main) = app.get_webview_window("main") {
@@ -115,6 +117,27 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running Kiku");
+}
+
+/// Delete history older than the user's retention setting.
+///
+/// Runs once at startup rather than on a timer: Kiku is not a long-running service,
+/// and a retention rule that only takes effect when the application is open is both
+/// sufficient and easier to reason about than a background job.
+fn apply_retention(app: &tauri::AppHandle) {
+    let state = app.state::<AppState>();
+    let Some(days) = state.preferences().retention_days else {
+        return;
+    };
+
+    match state
+        .history()
+        .and_then(|history| history.purge_older_than(days))
+    {
+        Ok(0) => {}
+        Ok(removed) => tracing::info!(removed, days, "purged old history"),
+        Err(error) => tracing::warn!(%error, "could not apply the history retention rule"),
+    }
 }
 
 /// Load the speech model without blocking startup.
