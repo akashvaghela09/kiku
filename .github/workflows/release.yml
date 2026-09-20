@@ -128,7 +128,10 @@ jobs:
       # bindings.ts is generated from the Rust command signatures and committed, so a
       # fresh clone can typecheck without a Rust build. Regenerate it here and fail if
       # it differs: that is what stops a stale copy from quietly compiling.
+      # Linux only. The bindings are generated from Rust signatures that do not vary
+      # by platform, so running this three times checks the same thing three times.
       - name: Verify generated IPC bindings are current
+        if: runner.os == 'Linux'
         working-directory: src-tauri
         run: |
           cargo test export_bindings
@@ -141,8 +144,28 @@ jobs:
       - name: Test
         working-directory: src-tauri
         run: |
+          # Clippy everywhere: it is check-only, so it never links or executes a
+          # binary, which makes it immune to the loader problem below while still
+          # catching the cfg and dead-code mistakes that only appear off Linux.
           cargo clippy --all-targets -- -D warnings
-          cargo test --lib
+
+          # The test binary is not run on Windows. sherpa-rs-sys's build script emits
+          # `cargo:rustc-link-lib=msvcrtd`, the debug C runtime, whenever it is itself
+          # compiled with debug assertions, which is every dev and test build. Rust's
+          # std links the release CRT, the linker warns `LNK4098: defaultlib 'msvcrt'
+          # conflicts`, msvcrtd wins, and the executable then imports a debug UCRT that
+          # does not match the runner's SDK. It dies at load with
+          # STATUS_ENTRYPOINT_NOT_FOUND before the harness prints a line.
+          #
+          # Release builds never receive that directive, so this is a property of the
+          # test profile and not of anything shipped. Disabling debug assertions for
+          # build scripts does fix it, but `build-override` also covers proc macros,
+          # and `tauri_utils::acl::resolved::ResolvedCommand` has a `#[cfg(debug_
+          # assertions)]` field, so `generate_context!` then emits a struct literal
+          # missing it and nothing compiles at all.
+          if [ "$RUNNER_OS" != "Windows" ]; then
+            cargo test --lib
+          fi
 
       # STATUS_ENTRYPOINT_NOT_FOUND names a real DLL missing a real export, and the
       # libraries are demonstrably already beside the binary, so placement is not the
