@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Copy, Mic, Search, Trash2 } from 'lucide-react';
 
 import { Badge, Button, Dialog, EmptyState, Input, Kbd, Row } from '@/components/ui';
+import { TranscriptText } from './TranscriptText';
 import { formatDayGroup, formatDuration, formatRelativeTime } from '@/lib/format';
 import type { Entry } from '@/lib/ipc';
 import { useHistory } from './useHistory';
@@ -22,6 +23,7 @@ interface HistoryViewProps {
 export function HistoryView({ hotkey, paused, onCopied }: HistoryViewProps) {
   const [query, setQuery] = useState('');
   const [confirmClear, setConfirmClear] = useState(false);
+  const [reading, setReading] = useState<Entry | null>(null);
   const { entries, total, loading, error, remove, clear } = useHistory(query);
 
   const groups = useMemo(() => groupByDay(entries), [entries]);
@@ -100,6 +102,7 @@ export function HistoryView({ hotkey, paused, onCopied }: HistoryViewProps) {
                     entry={entry}
                     onCopy={() => void copy(entry)}
                     onDelete={() => void remove(entry.id)}
+                    onExpand={() => setReading(entry)}
                   />
                 ))}
               </ul>
@@ -107,6 +110,26 @@ export function HistoryView({ hotkey, paused, onCopied }: HistoryViewProps) {
           ))
         )}
       </div>
+
+      <Dialog
+        open={reading !== null}
+        onOpenChange={(open) => !open && setReading(null)}
+        title={reading ? formatRelativeTime(reading.createdAt) : ''}
+        description={
+          reading
+            ? `${formatDuration(reading.audioMs)} of speech`
+            : undefined
+        }
+        confirmLabel="Copy"
+        cancelLabel="Close"
+        onConfirm={() => {
+          if (reading) void copy(reading);
+        }}
+      >
+        <p className="prose-transcript max-h-[46vh] overflow-auto text-base">
+          {reading?.text}
+        </p>
+      </Dialog>
 
       <Dialog
         open={confirmClear}
@@ -125,16 +148,18 @@ function TranscriptRow({
   entry,
   onCopy,
   onDelete,
+  onExpand,
 }: {
   entry: Entry;
   onCopy: () => void;
   onDelete: () => void;
+  onExpand: () => void;
 }) {
   return (
     <Row
       as="li"
       align="start"
-      title={<span className="prose-transcript block text-base">{entry.text}</span>}
+      title={<TranscriptText text={entry.text} onExpand={onExpand} />}
       description={
         <span className="flex items-center gap-2">
           <span>{formatRelativeTime(entry.createdAt)}</span>

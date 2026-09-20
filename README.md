@@ -77,6 +77,17 @@ download either, switch between them, and delete one to get the disk space back.
 - A CPU from roughly the last decade. There is no GPU requirement at all — that is why
   Kiku uses Parakeet rather than Whisper.
 
+## Continuous integration
+
+Every push to `master` builds installers for all three platforms and uploads them as
+workflow artefacts, downloadable from the run for 30 days — so there is always
+something to test without building locally. Pushing a `v*` tag builds the same
+installers and attaches them to a **draft** GitHub release, so publishing stays a
+decision rather than a side effect.
+
+A separate fast check runs lint, types, clippy and tests on every push and pull
+request.
+
 ## Building it yourself
 
 ```sh

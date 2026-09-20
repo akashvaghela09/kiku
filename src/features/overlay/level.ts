@@ -1,29 +1,11 @@
 /**
- * Turning a raw RMS reading into something a waveform can show.
+ * Waveform shaping.
  *
- * Linear RMS is useless for this: speech occupies a narrow band near the top of it, so
- * bars driven by it barely move. Mapping through decibels spreads that band across the
- * full range, which is why a dB meter looks alive and a linear one looks broken.
+ * The hard part — deciding whether a sound is speech or just the room — is done in
+ * Rust, where it has the history to learn each microphone's noise floor and is covered
+ * by tests. See `audio::SpeechLevel`. What arrives here is already 0 when nobody is
+ * talking, so everything below is purely about how the bars move.
  */
-
-/** Below this, treat the signal as silence. */
-const FLOOR_DB = -58;
-
-/** At this level the bars are at full height — a loud voice close to a laptop mic. */
-const CEILING_DB = -8;
-
-/**
- * Map an RMS value in 0..1 to a perceptual level in 0..1.
- *
- * These two thresholds are the entire feel of the waveform and are deliberately the
- * only tunables.
- */
-export function rmsToLevel(rms: number): number {
-  if (!Number.isFinite(rms) || rms <= 0) return 0;
-  const db = 20 * Math.log10(rms + 1e-7);
-  const level = (db - FLOOR_DB) / (CEILING_DB - FLOOR_DB);
-  return Math.min(1, Math.max(0, level));
-}
 
 /**
  * One step of VU-style smoothing: fast attack, slow release.

@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 
 use crate::asr::{AsrService, Transcript};
-use crate::audio::{Capture, Level, Recording};
+use crate::audio::{Capture, Level, Recording, SpeechLevel};
 use crate::error::{Error, Result};
 
 /// How often audio levels are published to the overlay.
@@ -221,26 +221,37 @@ fn transcribe(recording: &Recording, asr: &AsrService) -> Outcome {
     }
 }
 
-/// Wrap a level callback so it fires at most once per [`LEVEL_INTERVAL`].
+/// Wrap a level callback so it fires at most once per [`LEVEL_INTERVAL`], filling in
+/// the speech level as it goes.
 ///
 /// The first level always passes through, so the waveform starts moving the moment
-/// recording begins rather than up to 70 ms later.
+/// recording begins rather than up to 70 ms later. The speech level is computed here
+/// rather than in the audio callback because it needs several seconds of history to
+/// learn the noise floor, and because it should see the same throttled rate the
+/// waveform does.
 fn throttled(inner: impl Fn(Level) + Send + 'static) -> impl Fn(Level) + Send + 'static {
-    let last = Mutex::new(None::<Instant>);
+    let updates_per_second = 1.0 / LEVEL_INTERVAL.as_secs_f32();
+    let state = Mutex::new((None::<Instant>, SpeechLevel::new(updates_per_second)));
 
-    move |level| {
-        let mut last = match last.lock() {
+    move |mut level| {
+        let mut state = match state.lock() {
             Ok(guard) => guard,
             Err(_) => return,
         };
 
         let now = Instant::now();
-        let due = last.is_none_or(|previous| now.duration_since(previous) >= LEVEL_INTERVAL);
-        if due {
-            *last = Some(now);
-            drop(last);
-            inner(level);
+        let due = state
+            .0
+            .is_none_or(|previous| now.duration_since(previous) >= LEVEL_INTERVAL);
+        if !due {
+            return;
         }
+
+        state.0 = Some(now);
+        level.speech = state.1.observe(level.rms);
+        drop(state);
+
+        inner(level);
     }
 }
 

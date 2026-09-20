@@ -21,6 +21,11 @@ pub struct Level {
     pub peak: f32,
     /// Whether any sample in the buffer reached full scale.
     pub clipped: bool,
+    /// How far above the learned noise floor this is, 0..1 — what the waveform draws.
+    ///
+    /// Filled in by [`SpeechLevel`](super::SpeechLevel) once a session is running,
+    /// because it needs history that a single buffer does not have. Zero until then.
+    pub speech: f32,
 }
 
 impl Level {
@@ -40,6 +45,7 @@ impl Level {
             rms: (sum_squares / samples.len() as f32).sqrt(),
             peak,
             clipped: peak >= CLIP_THRESHOLD,
+            speech: 0.0,
         }
     }
 }

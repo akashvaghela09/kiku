@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { events } from '@/lib/ipc';
-import { rmsToLevel } from './level';
 
 /**
  * The overlay's visual state.
@@ -74,8 +73,10 @@ export function useOverlaySession(): Session {
 
     const unlisten = Promise.all([
       events.levelMeasured.listen((event) => {
-        // `rms` is nullable because a Rust f32 can be NaN, which JSON cannot carry.
-        levelRef.current = rmsToLevel(event.payload.rms ?? 0);
+        // Already 0..1 and already gated against this microphone's noise floor —
+        // see `audio::SpeechLevel`. Nullable only because a Rust f32 can be NaN,
+        // which JSON cannot represent.
+        levelRef.current = event.payload.speech ?? 0;
       }),
 
       events.dictationStateChanged.listen((event) => {
