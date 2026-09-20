@@ -47,24 +47,28 @@ impl Default for HotkeyBindings {
 /// Holding a shortcut produces repeated `Pressed` events on some platforms. Without
 /// the `holding` latch each repeat would restart the recording, so a held key would
 /// capture only the last few milliseconds before release.
+///
+/// Either binding may be a watched single key rather than a registered shortcut — a
+/// bare modifier cannot be registered at all — in which case it is `None` here and
+/// `watcher` reports it instead.
 #[derive(Debug)]
 pub struct Interpreter {
-    hold: Shortcut,
-    toggle: Shortcut,
+    hold: Option<Shortcut>,
+    toggle: Option<Shortcut>,
     holding: AtomicBool,
 }
 
 impl Interpreter {
     pub fn new(bindings: &HotkeyBindings) -> Result<Self> {
         Ok(Self {
-            hold: bindings.hold.shortcut()?,
-            toggle: bindings.toggle.shortcut()?,
+            hold: registrable(&bindings.hold)?,
+            toggle: registrable(&bindings.toggle)?,
             holding: AtomicBool::new(false),
         })
     }
 
     pub fn interpret(&self, fired: &Shortcut, state: ShortcutState) -> Option<HotkeyAction> {
-        if *fired == self.hold {
+        if self.hold.as_ref() == Some(fired) {
             return match state {
                 // `swap` makes the latch atomic: two repeats arriving together still
                 // produce exactly one HoldStarted.
@@ -77,7 +81,7 @@ impl Interpreter {
             };
         }
 
-        if *fired == self.toggle {
+        if self.toggle.as_ref() == Some(fired) {
             // Only the press matters; the release of a toggle means nothing.
             return matches!(state, ShortcutState::Pressed).then_some(HotkeyAction::Toggled);
         }
@@ -92,20 +96,38 @@ impl Interpreter {
     }
 }
 
+/// The shortcut a binding registers as, or `None` when it is a watched single key.
+fn registrable(hotkey: &Hotkey) -> Result<Option<Shortcut>> {
+    if hotkey.single_key().is_some() {
+        return Ok(None);
+    }
+    hotkey.shortcut().map(Some)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    /// Bindings where both halves are registrable chords, which is what the
+    /// Interpreter is responsible for. The shipped default hold is a watched single
+    /// key and never reaches this code.
+    fn chord_bindings() -> HotkeyBindings {
+        HotkeyBindings {
+            hold: Hotkey::parse(super::super::FALLBACK_HOLD).unwrap(),
+            toggle: Hotkey::parse(DEFAULT_TOGGLE).unwrap(),
+        }
+    }
+
     fn interpreter() -> Interpreter {
-        Interpreter::new(&HotkeyBindings::default()).unwrap()
+        Interpreter::new(&chord_bindings()).unwrap()
     }
 
     fn hold() -> Shortcut {
-        HotkeyBindings::default().hold.shortcut().unwrap()
+        chord_bindings().hold.shortcut().unwrap()
     }
 
     fn toggle() -> Shortcut {
-        HotkeyBindings::default().toggle.shortcut().unwrap()
+        chord_bindings().toggle.shortcut().unwrap()
     }
 
     #[test]
@@ -205,16 +227,21 @@ mod tests {
     }
 
     #[test]
-    fn the_defaults_are_the_documented_pair() {
+    fn the_default_hold_is_a_single_key_and_the_toggle_is_a_chord() {
         let bindings = HotkeyBindings::default();
-        assert_eq!(bindings.hold.spec, "Ctrl+Shift+Space");
+        assert!(
+            bindings.hold.single_key().is_some(),
+            "holding should need one key, not a chord"
+        );
         assert_eq!(bindings.toggle.spec, "Ctrl+Alt+Space");
     }
 
     #[test]
-    fn the_defaults_share_a_base_key_so_there_is_one_thing_to_learn() {
-        let bindings = HotkeyBindings::default();
-        let base = |spec: &str| spec.rsplit('+').next().unwrap_or_default().to_owned();
-        assert_eq!(base(&bindings.hold.spec), base(&bindings.toggle.spec));
+    fn a_watched_hold_key_leaves_the_interpreter_only_the_toggle() {
+        // The watcher reports the single key; the Interpreter must not expect it to
+        // arrive as a registered shortcut.
+        let interpreter = Interpreter::new(&HotkeyBindings::default()).unwrap();
+        assert!(interpreter.hold.is_none());
+        assert!(interpreter.toggle.is_some());
     }
 }

@@ -9,13 +9,22 @@ telemetry. The network is touched exactly twice: once to download the speech mod
 and — if you leave it on — once a day to check whether a newer version exists.
 
 ```
-Ctrl + Shift + Space   hold to talk
-Ctrl + Alt   + Space   press once to start, again to stop
-Escape                 cancel without transcribing
+Right Ctrl           hold to talk         (Right Option on macOS)
+Right Ctrl, twice    start hands-free; tap again to stop
+Ctrl + Alt + Space   toggle, if you prefer a chord
+Escape               cancel without transcribing
 ```
 
-Both shortcuts are rebindable, and Settings offers an `F9` / `F10` preset — a single
-key is easier to hold than a chord, and function keys can never fire while you type.
+One key is easier to hold than a chord, and no operating system uses Right Ctrl on its
+own. It cannot be registered as a global shortcut — no platform accepts a bare
+modifier — so Kiku watches its state instead. It never intercepts the key, so Right
+Ctrl keeps working as Ctrl everywhere else, and **pressing any other key while holding
+it cancels**, which is what stops Right Ctrl + C from copying *and* dictating.
+
+Mac keyboards have no right Control key, which is why macOS watches Right Option.
+
+Settings offers `F9` / `F10` and a `Ctrl+Shift+Space` chord as alternatives, and every
+shortcut is rebindable.
 
 ## Installing
 

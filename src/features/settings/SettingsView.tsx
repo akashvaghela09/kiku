@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 import { Badge, Button, Dialog, Kbd, Panel, Row, Select, Toggle } from '@/components/ui';
-import { formatBytes } from '@/lib/format';
+import { formatBytes, isMac } from '@/lib/format';
 import {
   commands,
   type AppInfo,
@@ -159,9 +159,15 @@ export function SettingsView({ bindings, onBindingsChanged, onNotify }: Settings
             <Row
               align="start"
               title="Presets"
-              description="Function keys are easier to hold than a three-key chord, and can never fire while you type. On Mac laptops they need Fn unless standard function keys are enabled."
+              description="One key is easier to hold than a chord. Right Ctrl is watched rather than registered, so it still works as Ctrl everywhere else — pressing any other key while holding it cancels. Use a chord instead if your keyboard has no right Ctrl."
               trailing={
-                <div className="flex gap-1.5">
+                <div className="flex flex-wrap justify-end gap-1.5">
+                  <Button
+                    size="sm"
+                    onClick={() => void applyPreset(singleKeyDefault(), 'Ctrl+Alt+Space')}
+                  >
+                    {singleKeyLabel()}
+                  </Button>
                   <Button size="sm" onClick={() => void applyPreset('F9', 'F10')}>
                     F9 / F10
                   </Button>
@@ -169,7 +175,7 @@ export function SettingsView({ bindings, onBindingsChanged, onNotify }: Settings
                     size="sm"
                     onClick={() => void applyPreset('Ctrl+Shift+Space', 'Ctrl+Alt+Space')}
                   >
-                    Default
+                    Chord
                   </Button>
                 </div>
               }
@@ -388,6 +394,19 @@ export function SettingsView({ bindings, onBindingsChanged, onNotify }: Settings
       />
     </div>
   );
+}
+
+/**
+ * The single key to offer as the hold shortcut.
+ *
+ * Mac keyboards have no right Control key, so macOS gets Right Option instead.
+ */
+function singleKeyDefault(): string {
+  return isMac() ? 'RightAlt' : 'RightControl';
+}
+
+function singleKeyLabel(): string {
+  return isMac() ? 'Right \u2325' : 'Right Ctrl';
 }
 
 function describeUpdate(status: UpdateStatus): string {

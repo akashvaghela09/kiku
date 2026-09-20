@@ -14,7 +14,7 @@ use crate::asr::AsrService;
 use crate::dictation::Dictation;
 use crate::error::{Error, Result};
 use crate::history::History;
-use crate::hotkeys::HotkeyBindings;
+use crate::hotkeys::{HotkeyBindings, KeyWatcher};
 use crate::models::ModelStore;
 
 /// User preferences that affect how a transcript is delivered.
@@ -118,10 +118,15 @@ impl AppState {
     }
 }
 
-/// The bindings currently registered with the operating system.
+/// The bindings currently in force.
+///
+/// Also owns the key watcher, because a bare modifier cannot be registered with the
+/// operating system and has to be polled instead. Keeping the watcher here is what
+/// keeps it alive — dropping it stops the poll thread.
 #[derive(Default)]
 pub struct HotkeyState {
     bindings: Mutex<Option<HotkeyBindings>>,
+    watcher: Mutex<Option<KeyWatcher>>,
 }
 
 impl HotkeyState {
@@ -137,6 +142,14 @@ impl HotkeyState {
     pub fn adopt(&self, bindings: HotkeyBindings) {
         if let Ok(mut current) = self.bindings.lock() {
             *current = Some(bindings);
+        }
+    }
+
+    /// Install a key watcher, stopping whichever one was running.
+    pub fn watch(&self, watcher: Option<KeyWatcher>) {
+        if let Ok(mut current) = self.watcher.lock() {
+            // Dropping the previous watcher stops its thread.
+            *current = watcher;
         }
     }
 }

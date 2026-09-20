@@ -15,15 +15,29 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 use tauri_plugin_global_shortcut::{Code, Shortcut};
 
+use super::watcher::SingleKey;
 use crate::error::{Error, Result};
 
 /// Hold to talk. Releasing the key ends the recording.
 ///
+/// A single key, because one key is far easier to *hold* than a chord, and Right Ctrl
+/// is never used alone by any operating system. It cannot be registered as a global
+/// shortcut — no platform accepts a bare modifier — so it is watched instead; see
+/// [`super::watcher`].
+///
 /// Not `Alt+Space`, which reads better but is genuinely contested: it opens the window
 /// system menu on Windows and on GNOME and Cinnamon — verified bound to
-/// `activate-window-menu` on the development machine. `Ctrl+Shift+Space` is unclaimed
-/// at the OS level on all three platforms.
-pub const DEFAULT_HOLD: &str = "Ctrl+Shift+Space";
+/// `activate-window-menu` on the development machine.
+///
+/// Mac keyboards have no right Control key, so macOS watches Right Option instead.
+#[cfg(target_os = "macos")]
+pub const DEFAULT_HOLD: &str = "RightAlt";
+#[cfg(not(target_os = "macos"))]
+pub const DEFAULT_HOLD: &str = "RightControl";
+
+/// Fallback for keyboards without a usable right-hand modifier, and for anyone who
+/// would rather have a chord. Unclaimed at the OS level on all three platforms.
+pub const FALLBACK_HOLD: &str = "Ctrl+Shift+Space";
 
 /// Press once to start, again to stop. Same base key, so there is one thing to learn.
 pub const DEFAULT_TOGGLE: &str = "Ctrl+Alt+Space";
@@ -42,6 +56,15 @@ impl Hotkey {
         let trimmed = spec.trim();
         if trimmed.is_empty() {
             return Err(Error::Internal("A shortcut cannot be empty.".into()));
+        }
+
+        // Single keys are watched rather than registered, so they never reach the
+        // platform's shortcut parser — which rejects bare modifiers outright.
+        if let Some(single) = SingleKey::parse(trimmed) {
+            return Ok(Self {
+                spec: trimmed.to_owned(),
+                display: single.display().to_owned(),
+            });
         }
 
         // Reject anything the OS could not register, with a sentence that explains the
@@ -66,7 +89,19 @@ impl Hotkey {
         })
     }
 
+    /// The single key this binding watches, if it is one.
+    pub fn single_key(&self) -> Option<SingleKey> {
+        SingleKey::parse(&self.spec)
+    }
+
+    /// The registrable shortcut this binding is, if it is one.
     pub fn shortcut(&self) -> Result<Shortcut> {
+        if self.single_key().is_some() {
+            return Err(Error::Internal(format!(
+                "{} is watched rather than registered.",
+                self.spec
+            )));
+        }
         Shortcut::from_str(&self.spec)
             .map_err(|_| Error::Internal(format!("{} is no longer a valid shortcut.", self.spec)))
     }
@@ -149,9 +184,40 @@ mod tests {
     use super::*;
 
     #[test]
-    fn both_defaults_are_valid() {
-        assert!(Hotkey::parse(DEFAULT_HOLD).is_ok());
-        assert!(Hotkey::parse(DEFAULT_TOGGLE).is_ok());
+    fn every_default_is_valid() {
+        for spec in [DEFAULT_HOLD, DEFAULT_TOGGLE, FALLBACK_HOLD] {
+            assert!(Hotkey::parse(spec).is_ok(), "{spec} should parse");
+        }
+    }
+
+    #[test]
+    fn the_default_hold_is_a_watched_single_key() {
+        let hold = Hotkey::parse(DEFAULT_HOLD).unwrap();
+        assert!(
+            hold.single_key().is_some(),
+            "the default should be one key to hold"
+        );
+        assert!(
+            hold.shortcut().is_err(),
+            "a watched key must not be handed to the shortcut registrar"
+        );
+    }
+
+    #[test]
+    fn a_chord_is_registrable_and_not_a_watched_key() {
+        let chord = Hotkey::parse(FALLBACK_HOLD).unwrap();
+        assert!(chord.single_key().is_none());
+        assert!(chord.shortcut().is_ok());
+    }
+
+    #[test]
+    fn a_single_key_gets_a_readable_display_name() {
+        let hold = Hotkey::parse("RightControl").unwrap();
+        assert!(!hold.display.is_empty());
+        assert_ne!(
+            hold.display, "RightControl",
+            "it should be written for a person"
+        );
     }
 
     #[test]

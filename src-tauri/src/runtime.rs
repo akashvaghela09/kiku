@@ -11,42 +11,74 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 use tauri_specta::Event;
 
 use crate::dictation::{DictationState, Outcome};
-use crate::hotkeys::{HotkeyAction, HotkeyBindings, Interpreter};
+use crate::hotkeys::{
+    HotkeyAction, HotkeyBindings, Interpreter, KeyWatcher, TapOutcome, Thresholds,
+};
 use crate::ipc::{DictationDiscarded, DictationStateChanged, LevelMeasured, TranscriptProduced};
 use crate::output::{self, Delivery};
 use crate::overlay;
 use crate::sound::{self, Cue};
 use crate::state::AppState;
 
-/// Register the dictation hotkeys and route their events into a session.
+/// Install the dictation hotkeys and route them into a session.
+///
+/// A binding takes one of two paths depending on what it is. A chord is registered
+/// with the operating system. A bare modifier such as Right Ctrl cannot be registered
+/// by any platform, so it is watched by polling its key state instead.
 pub fn install_hotkeys(app: &AppHandle, bindings: HotkeyBindings) -> crate::Result<()> {
     let interpreter = std::sync::Arc::new(Interpreter::new(&bindings)?);
 
-    let handler_app = app.clone();
-    let handler_interpreter = std::sync::Arc::clone(&interpreter);
+    let registered: Vec<Shortcut> = [&bindings.hold, &bindings.toggle]
+        .iter()
+        .filter(|hotkey| hotkey.single_key().is_none())
+        .map(|hotkey| hotkey.shortcut())
+        .collect::<crate::Result<_>>()?;
 
-    app.global_shortcut()
-        .on_shortcuts(
-            [bindings.hold.shortcut()?, bindings.toggle.shortcut()?],
-            move |_, shortcut: &Shortcut, event| {
+    if !registered.is_empty() {
+        let handler_app = app.clone();
+        let handler_interpreter = std::sync::Arc::clone(&interpreter);
+
+        app.global_shortcut()
+            .on_shortcuts(registered, move |_, shortcut: &Shortcut, event| {
                 let state: ShortcutState = event.state();
                 if let Some(action) = handler_interpreter.interpret(shortcut, state) {
                     handle(&handler_app, action);
                 }
-            },
-        )
-        .map_err(|error| {
-            tracing::warn!(%error, "could not attach the hotkey handler");
-            crate::Error::HotkeyTaken(bindings.hold.display.clone())
-        })?;
+            })
+            .map_err(|error| {
+                tracing::warn!(%error, "could not attach the hotkey handler");
+                crate::Error::HotkeyTaken(bindings.hold.display.clone())
+            })?;
+    }
+
+    install_watcher(app, &bindings);
 
     tracing::info!(
         hold = %bindings.hold.spec,
         toggle = %bindings.toggle.spec,
-        "dictation hotkeys registered"
+        "dictation hotkeys installed"
     );
     app.state::<AppState>().hotkeys.adopt(bindings);
     Ok(())
+}
+
+/// Start polling a single-key binding, or stop any watcher if neither is one.
+fn install_watcher(app: &AppHandle, bindings: &HotkeyBindings) {
+    let Some(key) = bindings.hold.single_key() else {
+        app.state::<AppState>().hotkeys.watch(None);
+        return;
+    };
+
+    let watcher_app = app.clone();
+    let watcher = KeyWatcher::start(key, Thresholds::default(), move |outcome| match outcome {
+        TapOutcome::Start => start(&watcher_app),
+        TapOutcome::Finish => stop(&watcher_app),
+        // A press too brief to be speech, or the key being used as a modifier. The
+        // audio is thrown away rather than transcribed.
+        TapOutcome::Discard => cancel(&watcher_app),
+    });
+
+    app.state::<AppState>().hotkeys.watch(Some(watcher));
 }
 
 /// Escape, registered only while a session is running.
@@ -109,6 +141,7 @@ fn cancel(app: &AppHandle) {
 pub fn rebind(app: &AppHandle, next: HotkeyBindings) -> crate::Result<()> {
     let previous = app.state::<AppState>().hotkeys.current();
     app.global_shortcut().unregister_all().ok();
+    app.state::<AppState>().hotkeys.watch(None);
 
     match install_hotkeys(app, next) {
         Ok(()) => Ok(()),
