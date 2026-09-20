@@ -144,14 +144,14 @@ mod tests {
 
     #[test]
     fn a_matching_rate_is_passed_through_untouched() {
-        let samples = Cue::Listening.samples().to_vec();
+        let samples = Cue::Start.samples().to_vec();
         let rate = SAMPLE_RATE;
         assert_eq!(resample_to(samples.clone(), rate, rate), samples);
     }
 
     #[test]
     fn resampling_scales_the_length_by_the_rate_ratio() {
-        let samples = Cue::Listening.samples().to_vec();
+        let samples = Cue::Start.samples().to_vec();
         let from = SAMPLE_RATE;
         let converted = resample_to(samples.clone(), from, 44_100);
         let expected = samples.len() as f64 * 44_100.0 / f64::from(from);
@@ -160,7 +160,7 @@ mod tests {
 
     #[test]
     fn resampling_preserves_the_duration_in_seconds() {
-        for cue in [Cue::Listening, Cue::Pasted, Cue::Error] {
+        for cue in [Cue::Start, Cue::Stop] {
             let from = SAMPLE_RATE;
             let original = cue.samples().to_vec();
             let original_seconds = original.len() as f32 / from as f32;

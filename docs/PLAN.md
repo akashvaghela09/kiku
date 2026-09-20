@@ -150,34 +150,26 @@ build script emits.
 
 ## Sound feedback
 
-Lives in `src-tauri/src/feedback/`, named for its purpose rather than its medium.
+Two cues, in `src-tauri/src/feedback/` — named for its purpose rather than its medium.
 `audio/` is sound coming **in** from the microphone; `feedback/` is sound going **out**
-to the speakers. They share nothing but the cpal dependency — opposite stream
+to the speakers. They share nothing but the cpal dependency: opposite stream
 directions, different sample rates, and different resamplers, because aliasing matters
 for speech and not for a 0.3 s blip.
 
-Two recorded cues, supplied by the owner and embedded in the binary with
-`include_bytes!` — no path to resolve, no difference between `cargo run` and an
-installed bundle, and no way for one to go missing:
+- `assets/sounds/start.wav` — Kiku started listening, on either shortcut
+- `assets/sounds/stop.wav` — Kiku stopped listening
 
-- `assets/sounds/listening.wav` — recording has begun
-- `assets/sounds/pasted.wav` — the transcript reached the user
+Both are 48 kHz mono and embedded with `include_bytes!`: no path to resolve, no
+difference between `cargo run` and an installed bundle, and no way for a cue to go
+missing. The originals are kept in `assets/sounds/source/`.
 
-Converted from the originals in `assets/sounds/source/` to 48 kHz mono and scaled by a
-common factor: peak 0.86 is hot for a cue heard dozens of times a day, and one factor
-preserves the designed relationship between them.
+Both cues are about **listening**, not about the result. A dictation that produces no
+text makes no sound at all — the overlay already says so, and a failure chime is one
+more noise in a tool used dozens of times a day. Cancelling sounds the same as
+stopping, because the microphone closing is the thing the user needs to know.
 
-A third cue — a dictation that produced nothing — has no recording, so it is
-synthesised. But it is synthesised *once*: `cargo test render_error_cue -- --ignored`
-writes `assets/sounds/error.wav`, which is committed and then loaded exactly like the
-two recordings. That keeps every cue on one code path and makes the failure sound
-listenable without running the application. Its level was set by measuring the output
-rather than by eye — a sustained tone reads far louder than a short transient at the
-same peak, and it was initially about four times the recordings' RMS.
-
-The toggle shortcut plays each cue at most once — listening on the first press, pasted
-when the text lands, and nothing on the second press. All of it is switchable off in
-Settings and on by default.
+The stop cue plays the moment listening ends rather than after decoding: the key was
+released a moment ago, and feedback three hundred milliseconds later reads as lag.
 
 ## Follow-ups
 

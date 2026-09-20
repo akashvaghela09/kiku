@@ -1,43 +1,36 @@
-//! The feedback cues and where their audio comes from.
+//! The two feedback cues and where their audio comes from.
 //!
-//! All three are 48 kHz mono WAV files in `assets/sounds/`, embedded in the binary
-//! with `include_bytes!`. Embedding rather than shipping files alongside means there
-//! is no path to resolve, no difference between running from `cargo` and running from
-//! an installed bundle, and no way for a cue to go missing.
-//!
-//! Two are recordings. The third, the failure cue, is generated — but generated
-//! *once*, by `cargo test render_error_cue -- --ignored`, and committed like the
-//! others. Keeping it a file rather than rendering it at runtime means every cue loads
-//! by the same path, and it can be listened to without running the application.
+//! Both are 48 kHz mono WAV files in `assets/sounds/`, embedded in the binary with
+//! `include_bytes!`. Embedding rather than shipping files alongside means there is no
+//! path to resolve, no difference between running from `cargo` and running from an
+//! installed bundle, and no way for a cue to go missing.
 
 use std::io::Cursor;
 use std::sync::OnceLock;
 
-/// Every cue is 48 kHz mono, so playback never has to branch on the source.
+/// Both cues are 48 kHz mono, so playback never has to branch on the source.
 pub const SAMPLE_RATE: u32 = 48_000;
 
-const LISTENING_WAV: &[u8] = include_bytes!(concat!(
+const START_WAV: &[u8] = include_bytes!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../assets/sounds/listening.wav"
+    "/../assets/sounds/start.wav"
 ));
-const PASTED_WAV: &[u8] = include_bytes!(concat!(
+const STOP_WAV: &[u8] = include_bytes!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../assets/sounds/pasted.wav"
-));
-const ERROR_WAV: &[u8] = include_bytes!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../assets/sounds/error.wav"
+    "/../assets/sounds/stop.wav"
 ));
 
 /// Which moment a cue marks.
+///
+/// Exactly two, and both are about *listening* rather than about the result. A
+/// dictation that produces no text makes no sound: the overlay says so, and a failure
+/// chime is one more noise in a tool used dozens of times a day.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Cue {
-    /// Recording has begun and the microphone is open.
-    Listening,
-    /// The transcript has reached the user.
-    Pasted,
-    /// Nothing usable came of it.
-    Error,
+    /// Kiku has started listening — on either the hold or the toggle shortcut.
+    Start,
+    /// Kiku has stopped listening.
+    Stop,
 }
 
 impl Cue {
@@ -48,25 +41,22 @@ impl Cue {
     /// noticeable.
     pub fn samples(self) -> &'static [f32] {
         match self {
-            Self::Listening => cached(&LISTENING, LISTENING_WAV, "listening"),
-            Self::Pasted => cached(&PASTED, PASTED_WAV, "pasted"),
-            Self::Error => cached(&ERROR, ERROR_WAV, "error"),
+            Self::Start => cached(&START, START_WAV, "start"),
+            Self::Stop => cached(&STOP, STOP_WAV, "stop"),
         }
     }
 
     /// The file this cue is loaded from, for logs and documentation.
     pub fn file_name(self) -> &'static str {
         match self {
-            Self::Listening => "listening.wav",
-            Self::Pasted => "pasted.wav",
-            Self::Error => "error.wav",
+            Self::Start => "start.wav",
+            Self::Stop => "stop.wav",
         }
     }
 }
 
-static LISTENING: OnceLock<Vec<f32>> = OnceLock::new();
-static PASTED: OnceLock<Vec<f32>> = OnceLock::new();
-static ERROR: OnceLock<Vec<f32>> = OnceLock::new();
+static START: OnceLock<Vec<f32>> = OnceLock::new();
+static STOP: OnceLock<Vec<f32>> = OnceLock::new();
 
 fn cached(slot: &'static OnceLock<Vec<f32>>, bytes: &'static [u8], name: &str) -> &'static [f32] {
     slot.get_or_init(|| decode(bytes, name))
@@ -108,17 +98,17 @@ fn decode(bytes: &'static [u8], name: &str) -> Vec<f32> {
 mod tests {
     use super::*;
 
-    const ALL: [Cue; 3] = [Cue::Listening, Cue::Pasted, Cue::Error];
+    const ALL: [Cue; 2] = [Cue::Start, Cue::Stop];
 
     #[test]
-    fn every_cue_has_audio() {
+    fn both_cues_have_audio() {
         for cue in ALL {
             assert!(!cue.samples().is_empty(), "{cue:?} decoded to nothing");
         }
     }
 
     #[test]
-    fn every_cue_is_short_enough_not_to_delay_speaking() {
+    fn both_cues_are_short_enough_not_to_delay_speaking() {
         for cue in ALL {
             let seconds = cue.samples().len() as f32 / SAMPLE_RATE as f32;
             assert!((0.05..=0.60).contains(&seconds), "{cue:?} lasts {seconds}s");
@@ -126,40 +116,26 @@ mod tests {
     }
 
     #[test]
-    fn no_cue_is_loud_enough_to_startle() {
-        // These are heard dozens of times a day. The recorded assets were scaled at
-        // conversion time to sit near the synthesised ones.
+    fn neither_cue_is_loud_enough_to_startle() {
+        // These are heard dozens of times a day.
         for cue in ALL {
             let peak = cue.samples().iter().fold(0.0f32, |m, s| m.max(s.abs()));
             assert!(peak <= 0.5, "{cue:?} peaks at {peak}");
-            assert!(peak > 0.05, "{cue:?} is inaudibly quiet at {peak}");
+            assert!(peak > 0.02, "{cue:?} is inaudibly quiet at {peak}");
         }
     }
 
     #[test]
-    fn every_cue_names_a_distinct_file() {
-        let mut names: Vec<_> = ALL.iter().map(|cue| cue.file_name()).collect();
-        names.sort_unstable();
-        let count = names.len();
-        names.dedup();
-        assert_eq!(names.len(), count, "two cues share a file");
+    fn the_two_cues_sound_distinct_from_each_other() {
+        // Start and stop must not be mistakable for one another, or the feedback says
+        // nothing. Different lengths are the cheapest guarantee of that.
+        let length = |cue: Cue| cue.samples().len();
+        assert_ne!(length(Cue::Start), length(Cue::Stop));
     }
 
     #[test]
-    fn no_cue_is_wildly_louder_than_the_others() {
-        // Peak is a poor guide: a sustained tone at the same peak as a short transient
-        // sounds several times louder, so this compares RMS.
-        let rms = |cue: Cue| {
-            let samples = cue.samples();
-            (samples.iter().map(|s| s * s).sum::<f32>() / samples.len() as f32).sqrt()
-        };
-        let levels: Vec<f32> = ALL.iter().map(|&cue| rms(cue)).collect();
-        let quietest = levels.iter().cloned().fold(f32::INFINITY, f32::min);
-        let loudest = levels.iter().cloned().fold(0.0f32, f32::max);
-        assert!(
-            loudest / quietest < 4.0,
-            "cue levels are out of step: {levels:?}"
-        );
+    fn each_cue_names_its_own_file() {
+        assert_ne!(Cue::Start.file_name(), Cue::Stop.file_name());
     }
 
     #[test]

@@ -127,6 +127,9 @@ fn cancel(app: &AppHandle) {
         tracing::warn!(%error, "could not cancel the recording");
     }
 
+    // Cancelling is still listening stopping, so it sounds the same. The user needs to
+    // know the microphone closed; whether anything came of it is the overlay's job.
+    feedback::play(Cue::Stop, state.preferences().sounds);
     release_escape(app);
     let _ = DictationDiscarded(crate::dictation::Discarded::TooShort).emit(app);
     publish_state(app, DictationState::Idle);
@@ -192,7 +195,7 @@ fn start(app: &AppHandle) {
 
     match result {
         Ok(()) => {
-            feedback::play(Cue::Listening, state.preferences().sounds);
+            feedback::play(Cue::Start, state.preferences().sounds);
             grab_escape(app);
             show_overlay(app);
             publish_state(app, DictationState::Listening);
@@ -212,6 +215,7 @@ fn stop(app: &AppHandle) {
     }
 
     release_escape(app);
+    feedback::play(Cue::Stop, state.preferences().sounds);
     publish_state(app, DictationState::Processing);
 
     // Decoding blocks for a few hundred milliseconds; keep it off the event loop so
@@ -226,7 +230,6 @@ fn stop(app: &AppHandle) {
             }
             Ok(Outcome::Discarded(reason)) => {
                 tracing::debug!(?reason, "dictation produced no text");
-                feedback::play(Cue::Error, state.preferences().sounds);
                 let _ = DictationDiscarded(reason).emit(&app);
             }
             Err(error) => {
@@ -252,20 +255,10 @@ fn deliver(app: &AppHandle, transcript: crate::asr::Transcript) {
     let text = output::prepare(&transcript.text, preferences.trailing_space);
 
     match output::deliver(app, &text, preferences.auto_paste) {
-        // The cue marks the text arriving, so it plays on delivery rather than on the
-        // key release. Reaching the clipboard counts: the text arrived either way, and
-        // a refused paste is not a failed dictation.
-        Ok(Delivery::Pasted) => {
-            tracing::debug!("transcript pasted");
-            feedback::play(Cue::Pasted, preferences.sounds);
-        }
-        Ok(Delivery::CopiedOnly) => {
-            tracing::info!("transcript copied but not pasted");
-            feedback::play(Cue::Pasted, preferences.sounds);
-        }
+        Ok(Delivery::Pasted) => tracing::debug!("transcript pasted"),
+        Ok(Delivery::CopiedOnly) => tracing::info!("transcript copied but not pasted"),
         Err(error) => {
             tracing::error!(%error, "could not deliver the transcript");
-            feedback::play(Cue::Error, preferences.sounds);
             let _ = app.emit("dictation-error", error.to_string());
         }
     }

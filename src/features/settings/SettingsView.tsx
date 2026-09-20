@@ -266,22 +266,22 @@ export function SettingsView({ bindings, onBindingsChanged, onNotify }: Settings
           <Panel title="Sounds">
             <Row
               title="Sound feedback"
-              description="A short cue when Kiku starts listening, and another when your text arrives."
+              description="A short cue when Kiku starts listening, and another when it stops."
               trailing={
                 <div className="flex items-center gap-1.5">
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => void commands.previewSound('listening')}
+                    onClick={() => void commands.previewSound('start')}
                   >
-                    Listening
+                    Start
                   </Button>
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => void commands.previewSound('pasted')}
+                    onClick={() => void commands.previewSound('stop')}
                   >
-                    Pasted
+                    Stop
                   </Button>
                   <Toggle
                     checked={preferences.sounds}
