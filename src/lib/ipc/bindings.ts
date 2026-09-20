@@ -268,13 +268,9 @@ export type Page = {
 	total: number,
 };
 
-/**
- *  User preferences that affect how a transcript is delivered.
- * 
- *  Persisted to disk in chunk 10; held here so the rest of the application can already
- *  read them from one place.
- */
 export type Preferences = {
+	/**  Light, dark, or whatever the desktop is set to. */
+	theme: Theme,
 	/**  Paste into the focused window after copying. The copy always happens. */
 	autoPaste: boolean,
 	/**  Append one space, so consecutive dictations do not run together. */
@@ -303,6 +299,21 @@ export type SoundCue =
 "start" | 
 /**  Kiku stopped listening. */
 "stop";
+
+/**
+ *  User preferences that affect how a transcript is delivered.
+ * 
+ *  Persisted to disk in chunk 10; held here so the rest of the application can already
+ *  read them from one place.
+ *  Which palette the main window uses.
+ * 
+ *  The overlay is deliberately not covered by this. It floats over an arbitrary
+ *  application rather than over a Kiku window, so matching the desktop theme would be
+ *  a promise about a surface the app does not own; it is always dark.
+ */
+export type Theme = 
+/**  Follow the desktop, and keep following it when it changes. */
+"system" | "light" | "dark";
 
 export type Transcript = {
 	/**  Recognised text, already punctuated and capitalised by the model. */

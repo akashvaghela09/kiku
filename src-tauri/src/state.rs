@@ -21,9 +21,26 @@ use crate::models::ModelStore;
 ///
 /// Persisted to disk in chunk 10; held here so the rest of the application can already
 /// read them from one place.
+/// Which palette the main window uses.
+///
+/// The overlay is deliberately not covered by this. It floats over an arbitrary
+/// application rather than over a Kiku window, so matching the desktop theme would be
+/// a promise about a surface the app does not own; it is always dark.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, Type)]
+#[serde(rename_all = "lowercase")]
+pub enum Theme {
+    /// Follow the desktop, and keep following it when it changes.
+    #[default]
+    System,
+    Light,
+    Dark,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Preferences {
+    /// Light, dark, or whatever the desktop is set to.
+    pub theme: Theme,
     /// Paste into the focused window after copying. The copy always happens.
     pub auto_paste: bool,
     /// Append one space, so consecutive dictations do not run together.
@@ -45,6 +62,7 @@ pub struct Preferences {
 impl Default for Preferences {
     fn default() -> Self {
         Self {
+            theme: Theme::System,
             auto_paste: true,
             trailing_space: true,
             sounds: true,

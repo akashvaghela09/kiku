@@ -1,5 +1,6 @@
 import {
   ClipboardCheck,
+  Palette,
   History,
   Info,
   Keyboard,
@@ -27,6 +28,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   { id: 'microphone', label: 'Microphone', icon: Mic },
   { id: 'model', label: 'Speech model', icon: Waves },
   { id: 'output', label: 'Output', icon: ClipboardCheck },
+  { id: 'appearance', label: 'Appearance', icon: Palette },
   { id: 'sounds', label: 'Sounds', icon: Volume2 },
   { id: 'history', label: 'History', icon: History },
   { id: 'updates', label: 'Updates', icon: RefreshCw },

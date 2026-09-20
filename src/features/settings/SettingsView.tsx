@@ -19,6 +19,7 @@ import { ViewToolbar } from '@/features/shell/ViewToolbar';
 import { VIEW_LABELS } from '@/features/shell/views';
 import { HotkeyField } from './HotkeyField';
 import { SETTINGS_SECTIONS } from './sections';
+import { THEMES } from './theme';
 import { usePreferences } from './usePreferences';
 
 /**
@@ -324,6 +325,30 @@ export function SettingsView({
                   checked={preferences.trailingSpace}
                   onChange={(trailingSpace) => update({ trailingSpace })}
                   aria-label="Add a trailing space"
+                />
+              }
+            />
+          </Panel>
+        </section>
+
+        <section id="appearance" className="scroll-mt-6">
+          <Panel
+            title="Appearance"
+            description="The listening capsule stays dark in every theme, because it sits over other applications rather than over Kiku."
+          >
+            <Row
+              title="Theme"
+              description="System follows your desktop, and keeps following it if you change it."
+              trailing={
+                <Select
+                  value={preferences.theme}
+                  aria-label="Theme"
+                  options={THEMES.map(({ value, label, description }) => ({
+                    value,
+                    label,
+                    ...(description ? { description } : {}),
+                  }))}
+                  onChange={(theme) => update({ theme })}
                 />
               }
             />

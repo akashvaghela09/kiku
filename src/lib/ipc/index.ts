@@ -26,6 +26,7 @@ export type {
   Page,
   Preferences,
   SoundCue,
+  Theme,
   Transcript,
   UpdateStatus,
 } from './bindings';

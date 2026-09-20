@@ -15,26 +15,33 @@
   --brand-cyan: #22a7cc;
   --brand-teal: #2a94b2;
 
-  /* ---- surfaces ---- */
+  /*
+   * ---- surfaces ----
+   *
+   * The separations here are wider than their counterparts in the dark block, on
+   * purpose. A given contrast ratio is harder to see near white than near black, so
+   * matching dark's numbers produced a light theme with panels, hover states and
+   * borders that were all technically present and effectively invisible.
+   */
   --surface: #ffffff;
   --surface-raised: #ffffff;
-  --surface-sunken: #f6f8fa;
-  --surface-hover: #f6f8fa;
-  --surface-active: #edf1f4;
+  --surface-sunken: #eceff4;
+  --surface-hover: #f0f3f7;
+  --surface-active: #e4e9f0;
   --surface-selected: #edfafe;
   --surface-scrim: rgb(16 21 26 / 0.4);
 
   /* ---- borders ---- */
-  --border: #dde4e9;
-  --border-strong: #c3cdd5;
-  --border-subtle: #edf1f4;
+  --border: #ccd5de;
+  --border-strong: #b3bfca;
+  --border-subtle: #e2e8ee;
   --border-accent: #a5e6f8;
 
   /* ---- text ---- */
   --text-primary: #191f25;
   --text-secondary: #53616c;
   --text-muted: #64727e;
-  --text-disabled: #94a3ae;
+  --text-disabled: #8a98a5;
   --text-on-accent: #ffffff;
   --text-accent: #17738f;
 

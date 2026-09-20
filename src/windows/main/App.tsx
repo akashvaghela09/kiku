@@ -4,6 +4,7 @@ import { Toast } from '@/components/ui';
 import { HistoryView } from '@/features/history/HistoryView';
 import { OnboardingView } from '@/features/onboarding/OnboardingView';
 import { SettingsView } from '@/features/settings/SettingsView';
+import { applyTheme } from '@/features/settings/theme';
 import { usePreferences } from '@/features/settings/usePreferences';
 import { NavigationRail } from '@/features/shell/NavigationRail';
 import type { View } from '@/features/shell/views';
@@ -25,6 +26,10 @@ export function App() {
   const [dismissedOnboarding, setDismissedOnboarding] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const { preferences } = usePreferences();
+
+  // Re-applied whenever the choice changes, and again on unmount, because "System"
+  // subscribes to the desktop setting for as long as it is selected.
+  useEffect(() => applyTheme(preferences.theme), [preferences.theme]);
 
   const refreshBindings = useCallback(() => {
     void commands.hotkeyBindings().then((result) => {
