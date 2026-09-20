@@ -72,15 +72,20 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      # Registry and toolchain only; target/ is deliberately NOT cached here.
+      #
+      # sherpa-rs-sys downloads and extracts sherpa-onnx into a directory outside
+      # target/ and emits a link search path pointing at it. A restored target/ makes
+      # cargo consider that build script fresh, so it never re-extracts, and the link
+      # then fails on whatever it cannot find: "unable to find library -lonnxruntime"
+      # on Linux, "cannot open input file 'cargs.lib'" on Windows. The staging in
+      # build.rs papers over the shared libraries but cannot cover import libraries,
+      # and the whole arrangement is a workaround for a cache this workflow does not
+      # need. A release should be built from clean anyway.
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
-          # sherpa-onnx's shared libraries are pruned from a cached target/ while
-          # cargo still believes the build script is fresh, which fails the link with
-          # "unable to find library -lonnxruntime". build.rs stages them here and
-          # restores them when target/ has lost them, so this directory has to survive
-          # the cache as well.
-          cache-directories: 'src-tauri/resources/lib'
+          cache-targets: false
 
       # The ubuntu runner ships with about 14GB free, and this job fills it: a debug
       # target tree for the tests, a release one for the bundle, and several copies of
