@@ -99,6 +99,7 @@ cargo clippy --all-targets -- -D warnings
 | | |
 |---|---|
 | Recognition | [NVIDIA Parakeet TDT 0.6B v2](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) through [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx), CPU only |
+| Sound | Two short cues — listening, and text delivered — embedded in the binary. Switchable off in Settings |
 | Shell | Tauri 2 · Rust · React · TypeScript · Tailwind |
 | Storage | SQLite, in your platform's application data directory |
 | History | Text only. Audio is never written to disk |

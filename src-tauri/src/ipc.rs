@@ -281,8 +281,11 @@ pub fn purge_history(state: State<'_, AppState>, days: u32) -> CommandResult<u32
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub enum SoundCue {
-    Start,
-    Stop,
+    /// Recording has begun.
+    Listening,
+    /// The transcript reached the user.
+    Pasted,
+    /// Nothing usable came of it.
     Error,
 }
 
@@ -294,8 +297,8 @@ pub enum SoundCue {
 #[specta::specta]
 pub fn preview_sound(cue: SoundCue) -> CommandResult<()> {
     let cue = match cue {
-        SoundCue::Start => Cue::Start,
-        SoundCue::Stop => Cue::Stop,
+        SoundCue::Listening => Cue::Listening,
+        SoundCue::Pasted => Cue::Pasted,
         SoundCue::Error => Cue::Error,
     };
     sound::play(cue, true);

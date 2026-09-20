@@ -192,7 +192,7 @@ fn start(app: &AppHandle) {
 
     match result {
         Ok(()) => {
-            sound::play(Cue::Start, state.preferences().sounds);
+            sound::play(Cue::Listening, state.preferences().sounds);
             grab_escape(app);
             show_overlay(app);
             publish_state(app, DictationState::Listening);
@@ -249,16 +249,23 @@ fn deliver(app: &AppHandle, transcript: crate::asr::Transcript) {
     let state = app.state::<AppState>();
     let preferences = state.preferences();
 
-    // Sound the end of the gesture before pasting, so the cue lands while the user is
-    // still expecting feedback rather than after the text has already appeared.
-    sound::play(Cue::Stop, preferences.sounds);
     let text = output::prepare(&transcript.text, preferences.trailing_space);
 
     match output::deliver(app, &text, preferences.auto_paste) {
-        Ok(Delivery::Pasted) => tracing::debug!("transcript pasted"),
-        Ok(Delivery::CopiedOnly) => tracing::info!("transcript copied but not pasted"),
+        // The cue marks the text arriving, so it plays on delivery rather than on the
+        // key release. Reaching the clipboard counts: the text arrived either way, and
+        // a refused paste is not a failed dictation.
+        Ok(Delivery::Pasted) => {
+            tracing::debug!("transcript pasted");
+            sound::play(Cue::Pasted, preferences.sounds);
+        }
+        Ok(Delivery::CopiedOnly) => {
+            tracing::info!("transcript copied but not pasted");
+            sound::play(Cue::Pasted, preferences.sounds);
+        }
         Err(error) => {
             tracing::error!(%error, "could not deliver the transcript");
+            sound::play(Cue::Error, preferences.sounds);
             let _ = app.emit("dictation-error", error.to_string());
         }
     }

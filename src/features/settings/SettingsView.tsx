@@ -265,20 +265,28 @@ export function SettingsView({ bindings, onBindingsChanged, onNotify }: Settings
         <section id="sounds" className="scroll-mt-4">
           <Panel title="Sounds">
             <Row
-              title="Play a tone when listening starts and stops"
+              title="Sound feedback"
+              description="A short cue when Kiku starts listening, and another when your text arrives."
               trailing={
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => void commands.previewSound('start')}
+                    onClick={() => void commands.previewSound('listening')}
                   >
-                    Preview
+                    Listening
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => void commands.previewSound('pasted')}
+                  >
+                    Pasted
                   </Button>
                   <Toggle
                     checked={preferences.sounds}
                     onChange={(sounds) => update({ sounds })}
-                    aria-label="Feedback sounds"
+                    aria-label="Sound feedback"
                   />
                 </div>
               }

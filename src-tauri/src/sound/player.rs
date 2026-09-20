@@ -16,7 +16,7 @@ use std::time::Duration;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::SampleFormat;
 
-use super::tone::{self, Cue};
+use super::cue::Cue;
 
 /// Play a cue on the default output device, returning immediately.
 pub fn play(cue: Cue) {
@@ -41,7 +41,11 @@ fn play_blocking(cue: Cue) -> Result<(), String> {
         .map_err(|error| error.to_string())?;
 
     let channels = usize::from(config.channels());
-    let samples = Arc::new(resample_to(tone::render(cue), config.sample_rate()));
+    let samples = Arc::new(resample_to(
+        cue.samples().into_owned(),
+        cue.sample_rate(),
+        config.sample_rate(),
+    ));
     let cursor = Arc::new(AtomicUsize::new(0));
     let total = samples.len();
 
@@ -115,15 +119,16 @@ fn build_stream(
     .map_err(|error| error.to_string())
 }
 
-/// Nearest-neighbour rate conversion for the cue.
+/// Nearest-neighbour rate conversion for a cue.
 ///
-/// Good enough here and nowhere else: a 100 ms tone has no content worth protecting
-/// from the aliasing this introduces, unlike captured speech, which gets rubato.
-fn resample_to(samples: Vec<f32>, rate: u32) -> Vec<f32> {
-    if rate == tone::SAMPLE_RATE {
+/// Good enough here and nowhere else: a few hundred milliseconds of blip has no
+/// content worth protecting from the aliasing this introduces, unlike captured
+/// speech, which goes through rubato.
+fn resample_to(samples: Vec<f32>, from_rate: u32, to_rate: u32) -> Vec<f32> {
+    if from_rate == to_rate {
         return samples;
     }
-    let ratio = f64::from(tone::SAMPLE_RATE) / f64::from(rate);
+    let ratio = f64::from(from_rate) / f64::from(to_rate);
     let frames = (samples.len() as f64 / ratio) as usize;
     (0..frames)
         .map(|index| {
@@ -139,24 +144,35 @@ mod tests {
 
     #[test]
     fn a_matching_rate_is_passed_through_untouched() {
-        let samples = tone::render(Cue::Start);
-        assert_eq!(resample_to(samples.clone(), tone::SAMPLE_RATE), samples);
+        let samples = Cue::Listening.samples().into_owned();
+        let rate = Cue::Listening.sample_rate();
+        assert_eq!(resample_to(samples.clone(), rate, rate), samples);
     }
 
     #[test]
     fn resampling_scales_the_length_by_the_rate_ratio() {
-        let samples = tone::render(Cue::Start);
-        let converted = resample_to(samples.clone(), 44_100);
-        let expected = samples.len() as f64 * 44_100.0 / f64::from(tone::SAMPLE_RATE);
+        let samples = Cue::Listening.samples().into_owned();
+        let from = Cue::Listening.sample_rate();
+        let converted = resample_to(samples.clone(), from, 44_100);
+        let expected = samples.len() as f64 * 44_100.0 / f64::from(from);
         assert!((converted.len() as f64 - expected).abs() < 2.0);
     }
 
     #[test]
     fn resampling_preserves_the_duration_in_seconds() {
-        for rate in [22_050, 44_100, 48_000, 96_000] {
-            let converted = resample_to(tone::render(Cue::Stop), rate);
-            let seconds = converted.len() as f32 / rate as f32;
-            assert!((seconds - 0.110).abs() < 0.01, "{rate} Hz gave {seconds}s");
+        for cue in [Cue::Listening, Cue::Pasted, Cue::Error] {
+            let from = cue.sample_rate();
+            let original = cue.samples().into_owned();
+            let original_seconds = original.len() as f32 / from as f32;
+
+            for rate in [22_050, 44_100, 48_000, 96_000] {
+                let converted = resample_to(original.clone(), from, rate);
+                let seconds = converted.len() as f32 / rate as f32;
+                assert!(
+                    (seconds - original_seconds).abs() < 0.01,
+                    "{cue:?} at {rate} Hz gave {seconds}s, expected {original_seconds}s"
+                );
+            }
         }
     }
 }
