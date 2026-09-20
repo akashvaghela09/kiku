@@ -17,7 +17,9 @@ interface TranscriptTextProps {
 }
 
 export function TranscriptText({ text, lines = 3, onExpand }: TranscriptTextProps) {
-  const ref = useRef<HTMLParagraphElement>(null);
+  // A span, not a p: this renders inside Row's title span, and flow content inside
+  // phrasing content is invalid nesting.
+  const ref = useRef<HTMLSpanElement>(null);
   const [clipped, setClipped] = useState(false);
 
   useEffect(() => {
@@ -36,9 +38,9 @@ export function TranscriptText({ text, lines = 3, onExpand }: TranscriptTextProp
 
   return (
     <span className="block">
-      <p
+      <span
         ref={ref}
-        className={cn('prose-transcript text-base')}
+        className={cn('prose-transcript block text-base')}
         style={{
           display: '-webkit-box',
           WebkitBoxOrient: 'vertical',
@@ -47,7 +49,7 @@ export function TranscriptText({ text, lines = 3, onExpand }: TranscriptTextProp
         }}
       >
         {text}
-      </p>
+      </span>
 
       {clipped && (
         <button

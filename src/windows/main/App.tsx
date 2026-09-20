@@ -1,25 +1,27 @@
 import { useCallback, useEffect, useState } from 'react';
-import { History, Settings as SettingsIcon } from 'lucide-react';
 
-import { Button, Toast } from '@/components/ui';
+import { Toast } from '@/components/ui';
 import { HistoryView } from '@/features/history/HistoryView';
 import { OnboardingView } from '@/features/onboarding/OnboardingView';
 import { SettingsView } from '@/features/settings/SettingsView';
 import { usePreferences } from '@/features/settings/usePreferences';
+import { NavigationRail } from '@/features/shell/NavigationRail';
+import type { View } from '@/features/shell/views';
 import { commands, events, type EngineStatus, type HotkeyBindings } from '@/lib/ipc';
 
-type View = 'history' | 'settings';
-
 /**
- * The main window.
+ * The application shell.
  *
- * Two views and a first-run path, chosen by what the application actually knows: if
- * there is no model, nothing else is worth showing yet.
+ * The shell owns the frame: navigation, the scroll region and the page background.
+ * Each view owns only its contents. Previously every view decided its own width,
+ * header and navigation, which is why History and Settings looked like two different
+ * applications.
  */
 export function App() {
   const [engine, setEngine] = useState<EngineStatus>({ state: 'unloaded' });
   const [bindings, setBindings] = useState<HotkeyBindings | null>(null);
   const [view, setView] = useState<View>('history');
+  const [section, setSection] = useState<string | null>(null);
   const [dismissedOnboarding, setDismissedOnboarding] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const { preferences } = usePreferences();
@@ -40,26 +42,45 @@ export function App() {
     return () => void unlisten.then((off) => off());
   }, [refreshBindings]);
 
+  const goToSection = useCallback((id: string) => {
+    setView('settings');
+    setSection(id);
+    // The section may not exist yet if Settings is only now mounting.
+    requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, []);
+
   if (!bindings) return <div className="h-full bg-surface" />;
 
-  // No model means onboarding, regardless of which view was last open.
+  // Without a model nothing else is worth showing, and onboarding fills the window
+  // rather than sitting beside a navigation rail that leads nowhere useful.
   if (engine.state === 'unloaded' && !dismissedOnboarding) {
     return (
-      <div className="h-full bg-surface">
+      <div className="h-full bg-surface-sunken">
         <OnboardingView bindings={bindings} onDone={() => setDismissedOnboarding(true)} />
       </div>
     );
   }
 
   return (
-    <div className="relative flex h-full flex-col bg-surface">
-      {/* `min-h-0` is what lets the view scroll instead of pushing the nav off the
-          bottom of the window - a flex child's default min-height is its content. */}
-      <div className="min-h-0 flex-1">
+    <div className="relative flex h-full bg-surface-sunken">
+      <NavigationRail
+        view={view}
+        onNavigate={(next) => {
+          setView(next);
+          if (next === 'history') setSection(null);
+        }}
+        engine={engine}
+        activeSection={section}
+        onSection={goToSection}
+      />
+
+      <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         {view === 'history' ? (
           <HistoryView
             hotkey={bindings.hold.spec.split('+')}
-            paused={preferences.historyPaused}
+            paused={!preferences.recordHistory}
             onCopied={() => setToast('Copied to clipboard')}
           />
         ) : (
@@ -67,38 +88,13 @@ export function App() {
             bindings={bindings}
             onBindingsChanged={refreshBindings}
             onNotify={setToast}
+            onSectionInView={setSection}
           />
         )}
-      </div>
-
-      <nav className="flex h-11 shrink-0 items-center gap-1 border-t border-border-subtle px-3">
-        <Button
-          variant={view === 'history' ? 'secondary' : 'ghost'}
-          size="sm"
-          icon={History}
-          onClick={() => setView('history')}
-        >
-          History
-        </Button>
-        <Button
-          variant={view === 'settings' ? 'secondary' : 'ghost'}
-          size="sm"
-          icon={SettingsIcon}
-          onClick={() => setView('settings')}
-        >
-          Settings
-        </Button>
-
-        {engine.state === 'loading' && (
-          <span className="ml-auto text-xs text-muted">Getting the model ready…</span>
-        )}
-        {engine.state === 'failed' && (
-          <span className="ml-auto text-xs text-danger">{engine.detail}</span>
-        )}
-      </nav>
+      </main>
 
       {toast && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-14 flex justify-center">
+        <div className="pointer-events-none absolute inset-x-0 bottom-6 flex justify-center">
           <Toast message={toast} onDismiss={() => setToast(null)} />
         </div>
       )}

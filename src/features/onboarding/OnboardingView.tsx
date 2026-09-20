@@ -60,8 +60,8 @@ export function OnboardingView({ bindings, onDone }: OnboardingProps) {
   };
 
   return (
-    <div className="flex h-full items-center justify-center p-8">
-      <div className="w-full max-w-[480px] space-y-4">
+    <div className="flex h-full items-center justify-center bg-surface-sunken p-8">
+      <div className="app-column max-w-[480px] space-y-4">
         <header className="text-center">
           <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-xl bg-accent-wash">
             <Mic size={24} strokeWidth={1.75} className="text-accent-graphic" aria-hidden />

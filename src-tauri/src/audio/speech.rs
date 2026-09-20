@@ -191,6 +191,55 @@ mod tests {
         );
     }
 
+    /// A perfectly unvarying sound *is* a noise floor, and is meant to read as one.
+    ///
+    /// This is the central trade of the module, pinned so that nobody removes it by
+    /// accident. Speech modulates by 15-25dB over syllable timescales and so keeps
+    /// refreshing the floor through its own gaps; a held tone, a hum or a fan does not,
+    /// so once the window fills with it the level falls away. The tempting "fix" -
+    /// lengthening `WINDOW_SECONDS` - would regress the hot-microphone bug this module
+    /// exists to solve. A rise-rate limit on the floor is the right change if one is
+    /// ever needed.
+    #[test]
+    fn an_unvarying_tone_becomes_the_floor_once_it_fills_the_window() {
+        let mut mapper = mapper();
+        settle(&mut mapper, 0.005, 2.0);
+
+        assert!(
+            mapper.observe(0.005 * 20.0) > 0.5,
+            "a new sound should register at first"
+        );
+
+        let after = settle(&mut mapper, 0.005 * 20.0, WINDOW_SECONDS + 0.5);
+        assert_eq!(after, 0.0, "and become the floor once the window is full of it");
+    }
+
+    /// The counterpart: a real voice keeps the meter alive for as long as it talks.
+    #[test]
+    fn modulated_speech_keeps_reading_for_as_long_as_it_lasts() {
+        let mut mapper = mapper();
+        settle(&mut mapper, 0.005, 2.0);
+
+        // Eight seconds of syllables, with the short gaps that every voice has.
+        let ticks = (8.0 * 30.0) as usize;
+        let last_second = ticks - 30;
+        let mut peak = 0.0f32;
+
+        for tick in 0..ticks {
+            let syllable = if tick % 7 < 2 {
+                1.0
+            } else {
+                6.0 + 20.0 * ((tick % 5) as f32 / 4.0)
+            };
+            let level = mapper.observe(0.005 * syllable);
+            if tick >= last_second {
+                peak = peak.max(level);
+            }
+        }
+
+        assert!(peak > 0.3, "the meter died during speech: {peak}");
+    }
+
     #[test]
     fn sustained_speech_does_not_drag_the_floor_up_with_it() {
         // If the floor chased the signal, a long sentence would fade its own bars out.

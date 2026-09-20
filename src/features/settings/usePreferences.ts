@@ -6,7 +6,7 @@ const FALLBACK: Preferences = {
   autoPaste: true,
   trailingSpace: true,
   sounds: true,
-  historyPaused: false,
+  recordHistory: true,
   retentionDays: null,
   checkForUpdates: true,
   modelId: null,

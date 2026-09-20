@@ -131,7 +131,44 @@
     max-width: 68ch;
     text-wrap: pretty;
   }
-}
+
+  /*
+   * The one content column, used by every scroll region in the app.
+   *
+   * 720px is derived rather than guessed: 68ch of transcript prose is about 620px,
+   * plus the row's 24px padding, a 12px gap and two 26px icon buttons. It also keeps
+   * a settings label and its control within one glance of each other.
+   *
+   * Width was previously decided separately by each screen, which is why History
+   * ended up a narrow column and Settings full-bleed - they read as two different
+   * applications. It belongs to the frame, not to a view.
+   */
+  .app-column {
+    width: min(100% - 3rem, 720px);
+    margin-inline: auto;
+  }
+
+  /*
+   * Row actions appear on hover, and on keyboard focus so they are never unreachable.
+   * `visibility` rather than `display` keeps them in the layout, so revealing one does
+   * not shift the row's text.
+   */
+  .row-action {
+    opacity: 0;
+    transition: opacity var(--dur-instant) linear;
+  }
+
+  .group\/row:hover .row-action,
+  .group\/row:focus-within .row-action,
+  .row-action:focus-visible {
+    opacity: 1;
+  }
+
+  @media (max-width: 1024px) {
+    .app-column {
+      width: min(100% - 2rem, 720px);
+    }
+  }}
 
 @media (prefers-reduced-motion: reduce) {
   *,

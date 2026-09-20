@@ -16,7 +16,20 @@ export interface RowProps {
   /** `start` for multi-line content such as a transcript. */
   align?: 'center' | 'start' | undefined;
   density?: 'comfortable' | 'compact' | undefined;
+  /**
+   * Hover and focus feedback without button semantics: no click target, no role, no
+   * tab stop. For a row whose parts are individually actionable - a transcript with
+   * its own Read more, Copy and Delete - where a pointer cursor would be a lie.
+   */
+  hoverable?: boolean | undefined;
+  /** A row that is itself a button. Implies `hoverable`. */
   interactive?: boolean | undefined;
+  /**
+   * Square the corners and widen the inset, for a row sitting flush inside a Panel.
+   * A prop rather than a className override because `cn` concatenates without
+   * resolving conflicts, so which padding wins would depend on class order.
+   */
+  flush?: boolean | undefined;
   selected?: boolean | undefined;
   onActivate?: () => void | undefined;
   className?: string | undefined;
@@ -30,7 +43,9 @@ export function Row({
   trailing,
   align = 'center',
   density = 'comfortable',
+  hoverable = false,
   interactive = false,
+  flush = false,
   selected = false,
   onActivate,
   className,
@@ -50,10 +65,15 @@ export function Row({
   return (
     <Element
       className={cn(
-        'flex w-full gap-3 rounded-md px-3',
+        'group/row flex w-full gap-3',
+        flush ? 'rounded-none px-4' : 'rounded-md px-3',
         density === 'compact' ? 'min-h-9 py-1.5' : 'min-h-12 py-2',
         align === 'start' ? 'items-start' : 'items-center',
-        interactive && 'cursor-pointer transition-colors duration-100 hover:bg-surface-hover',
+        // focus-within as well as hover: tabbing to a row's Copy button must light
+        // the same row the mouse would.
+        (interactive || hoverable) &&
+          'transition-colors duration-100 hover:bg-surface-hover focus-within:bg-surface-hover',
+        interactive && 'cursor-pointer',
         selected && 'bg-surface-selected',
         className,
       )}

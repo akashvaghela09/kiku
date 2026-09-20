@@ -81,7 +81,14 @@ impl AsrService {
     ///
     /// Blocks for the duration of the load, so callers run it off the UI thread.
     pub fn load(&self, files: &ModelFiles, model_id: &str) -> Result<()> {
+        // Dropping the previous engine frees several hundred megabytes and is not
+        // instant, so it is timed separately from loading the new one.
+        let releasing = std::time::Instant::now();
         self.set(State::Loading);
+        tracing::debug!(
+            released_ms = releasing.elapsed().as_millis() as u64,
+            "released the previous model"
+        );
 
         match ParakeetEngine::load(files, model_id) {
             Ok(engine) => {

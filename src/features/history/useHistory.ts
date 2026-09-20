@@ -74,13 +74,7 @@ export function useHistory(query: string) {
     await commands.deleteHistoryEntry(id);
   }, []);
 
-  const clear = useCallback(async () => {
-    const result = await commands.clearHistory();
-    if (result.status === 'ok') {
-      setState({ entries: [], total: 0, loading: false, error: null });
-    }
-    return result;
-  }, []);
-
-  return { ...state, reload: () => void load(query), remove, clear };
+  // No bulk clear here: deleting everything is a settings act, and Settings calls the
+  // command directly. A second copy of it would only be dead code.
+  return { ...state, reload: () => void load(query), remove };
 }

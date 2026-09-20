@@ -79,6 +79,22 @@ fn stage_libraries() -> std::io::Result<()> {
         println!("cargo:warning=restored {staged} native libraries from {STAGE_DIR}");
     }
 
+    // Windows has been failing with a test binary that dies before the harness runs,
+    // which is what a missing DLL looks like, and there is no way to inspect the
+    // runner. Report what was found and where so the next CI log answers it.
+    println!(
+        "cargo:warning=native libraries staged: {staged} (profile dir {})",
+        profile_dir.display()
+    );
+    if let Ok(entries) = std::fs::read_dir(&stage) {
+        for entry in entries.filter_map(Result::ok) {
+            println!(
+                "cargo:warning=  staged: {}",
+                entry.file_name().to_string_lossy()
+            );
+        }
+    }
+
     // Put them everywhere an executable might look. `profile_dir` serves the app
     // binary, `deps` serves the test binaries, and neither platform charges anything
     // meaningful for the duplication.

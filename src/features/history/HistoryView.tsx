@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Copy, Mic, Search, Trash2 } from 'lucide-react';
 
-import { Badge, Button, Dialog, EmptyState, Input, Kbd, Row } from '@/components/ui';
+import { Badge, Button, Dialog, EmptyState, Input, Kbd, Panel, Row } from '@/components/ui';
+import { ViewToolbar } from '@/features/shell/ViewToolbar';
+import { VIEW_LABELS } from '@/features/shell/views';
 import { TranscriptText } from './TranscriptText';
 import { formatDayGroup, formatDuration, formatRelativeTime } from '@/lib/format';
 import type { Entry } from '@/lib/ipc';
@@ -22,9 +24,8 @@ interface HistoryViewProps {
  */
 export function HistoryView({ hotkey, paused, onCopied }: HistoryViewProps) {
   const [query, setQuery] = useState('');
-  const [confirmClear, setConfirmClear] = useState(false);
   const [reading, setReading] = useState<Entry | null>(null);
-  const { entries, total, loading, error, remove, clear } = useHistory(query);
+  const { entries, total, loading, error, remove } = useHistory(query);
 
   const groups = useMemo(() => groupByDay(entries), [entries]);
 
@@ -35,41 +36,45 @@ export function HistoryView({ hotkey, paused, onCopied }: HistoryViewProps) {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border-subtle px-6">
-        <h1 className="text-xl font-semibold text-primary">History</h1>
-        {paused && <Badge tone="warning">Paused</Badge>}
+      <ViewToolbar
+        title={VIEW_LABELS.history}
+        meta={
+          <span className="flex items-center gap-2.5">
+            <span>{total === 1 ? '1 transcript' : `${total} transcripts`}</span>
+            {paused && <Badge tone="warning">Not recording</Badge>}
+          </span>
+        }
+      >
+        <Input
+          icon={Search}
+          clearable
+          value={query}
+          placeholder="Search transcripts"
+          onChange={(event) => setQuery(event.target.value)}
+          onClear={() => setQuery('')}
+          className="w-1/2 shrink-0"
+          aria-label="Search transcripts"
+        />
+      </ViewToolbar>
 
-        <div className="ml-auto flex items-center gap-2">
-          <Input
-            icon={Search}
-            clearable
-            value={query}
-            placeholder="Search transcripts"
-            onChange={(event) => setQuery(event.target.value)}
-            onClear={() => setQuery('')}
-            className="w-56"
-            aria-label="Search transcripts"
-          />
-          {total > 0 && (
-            <Button
-              variant="ghost"
-              icon={Trash2}
-              label="Delete all"
-              iconOnly
-              onClick={() => setConfirmClear(true)}
-            />
-          )}
-        </div>
-      </header>
-
-      <div className="min-h-0 flex-1 overflow-auto px-4 py-3">
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="app-column space-y-4 py-6">
         {error ? (
           <EmptyState
             icon={Trash2}
             title="History is unavailable"
             description={error}
           />
-        ) : entries.length === 0 && !loading ? (
+        ) : loading && entries.length === 0 ? (
+          <ul aria-hidden className="space-y-1">
+            {[0, 1, 2].map((index) => (
+              <li key={index} className="flex flex-col gap-2 px-3 py-3">
+                <span className="h-3.5 w-3/4 rounded-sm bg-surface-active" />
+                <span className="h-2.5 w-24 rounded-sm bg-surface-active" />
+              </li>
+            ))}
+          </ul>
+        ) : entries.length === 0 ? (
           query ? (
             <EmptyState
               compact
@@ -91,11 +96,8 @@ export function HistoryView({ hotkey, paused, onCopied }: HistoryViewProps) {
           )
         ) : (
           groups.map(([day, dayEntries]) => (
-            <section key={day} className="mb-4">
-              <h2 className="px-3 pb-1 text-2xs font-semibold uppercase tracking-[0.04em] text-muted">
-                {day}
-              </h2>
-              <ul>
+            <Panel key={day} flush eyebrow={day}>
+              <ul className="divide-y divide-border-subtle border-t border-border-subtle">
                 {dayEntries.map((entry) => (
                   <TranscriptRow
                     key={entry.id}
@@ -106,9 +108,10 @@ export function HistoryView({ hotkey, paused, onCopied }: HistoryViewProps) {
                   />
                 ))}
               </ul>
-            </section>
+            </Panel>
           ))
         )}
+        </div>
       </div>
 
       <Dialog
@@ -130,16 +133,6 @@ export function HistoryView({ hotkey, paused, onCopied }: HistoryViewProps) {
           {reading?.text}
         </p>
       </Dialog>
-
-      <Dialog
-        open={confirmClear}
-        onOpenChange={setConfirmClear}
-        tone="danger"
-        title="Delete all transcripts?"
-        description={`This removes all ${total} entries from this computer. It cannot be undone.`}
-        confirmLabel="Delete everything"
-        onConfirm={() => void clear()}
-      />
     </div>
   );
 }
@@ -159,7 +152,9 @@ function TranscriptRow({
     <Row
       as="li"
       align="start"
-      title={<TranscriptText text={entry.text} onExpand={onExpand} />}
+      hoverable
+      flush
+      title={<TranscriptText text={entry.text} lines={2} onExpand={onExpand} />}
       description={
         <span className="flex items-center gap-2">
           <span>{formatRelativeTime(entry.createdAt)}</span>
@@ -169,13 +164,23 @@ function TranscriptRow({
       }
       trailing={
         <>
-          <Button size="sm" variant="ghost" icon={Copy} iconOnly label="Copy" onClick={onCopy} />
+          <Button
+            size="sm"
+            variant="ghost"
+            icon={Copy}
+            iconOnly
+            label="Copy"
+            className="row-action text-muted hover:bg-surface-active hover:text-primary"
+            onClick={onCopy}
+          />
           <Button
             size="sm"
             variant="ghost"
             icon={Trash2}
             iconOnly
+            destructive
             label="Delete"
+            className="row-action text-muted hover:bg-danger-wash hover:text-danger"
             onClick={onDelete}
           />
         </>

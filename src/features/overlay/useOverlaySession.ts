@@ -26,6 +26,14 @@ export type CapsuleState =
  */
 const MIN_PROCESSING_MS = 180;
 
+/**
+ * How long the capsule takes to leave.
+ *
+ * Must match `capsule-exit` in overlay.css: the element is unmounted when this
+ * elapses, so a shorter value here would cut the animation off mid-flight.
+ */
+const EXIT_MS = 160;
+
 /** How long each terminal state stays on screen before the overlay exits. */
 const HOLD_MS: Partial<Record<CapsuleState, number>> = {
   done: 420,
@@ -38,11 +46,14 @@ interface Session {
   message: string | null;
   /** Latest perceptual level, read every frame by the waveform. */
   levelRef: React.RefObject<number>;
+  /** True while the capsule plays its exit, just before it unmounts. */
+  exiting: boolean;
 }
 
 export function useOverlaySession(): Session {
   const [state, setState] = useState<CapsuleState>('hidden');
   const [message, setMessage] = useState<string | null>(null);
+  const [exiting, setExiting] = useState(false);
 
   // A ref rather than state: the waveform reads this sixty times a second, and a
   // re-render per audio packet would cost far more than the animation itself.
@@ -63,8 +74,17 @@ export function useOverlaySession(): Session {
           setMessage(text);
           timers.push(
             window.setTimeout(() => {
-              setState('hidden');
-              setMessage(null);
+              // Leave, then unmount. Every terminal state exits the same way: a
+              // capsule that blinks out of existence reads as a glitch, not as
+              // restraint.
+              setExiting(true);
+              timers.push(
+                window.setTimeout(() => {
+                  setExiting(false);
+                  setState('hidden');
+                  setMessage(null);
+                }, EXIT_MS),
+              );
             }, HOLD_MS[next] ?? 400),
           );
         }, wait),
@@ -84,10 +104,12 @@ export function useOverlaySession(): Session {
         if (next === 'listening') {
           levelRef.current = 0;
           processingSince.current = 0;
+          setExiting(false);
           setState('listening');
           setMessage(null);
         } else if (next === 'processing') {
           processingSince.current = Date.now();
+          setExiting(false);
           setState('processing');
         }
         // 'idle' is not handled here: the terminal state that follows decides when
@@ -112,5 +134,5 @@ export function useOverlaySession(): Session {
     };
   }, []);
 
-  return { state, message, levelRef };
+  return { state, message, levelRef, exiting };
 }

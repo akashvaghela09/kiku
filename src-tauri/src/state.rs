@@ -30,8 +30,9 @@ pub struct Preferences {
     pub trailing_space: bool,
     /// Play the short tones that mark listening starting and finishing.
     pub sounds: bool,
-    /// Stop recording dictations to history. The existing history is left alone.
-    pub history_paused: bool,
+    /// Keep a record of each dictation. On by default; turning it off leaves the
+    /// existing history alone and simply stops adding to it.
+    pub record_history: bool,
     /// Delete history entries older than this many days. `None` keeps everything.
     pub retention_days: Option<u32>,
     /// Ask GitHub once a day whether a newer release exists. Never downloads.
@@ -47,7 +48,7 @@ impl Default for Preferences {
             auto_paste: true,
             trailing_space: true,
             sounds: true,
-            history_paused: false,
+            record_history: true,
             retention_days: None,
             check_for_updates: true,
             model_id: None,

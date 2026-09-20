@@ -28,7 +28,9 @@ export interface SelectProps<T> {
   placeholder?: string | undefined;
   size?: 'sm' | 'md' | undefined;
   /** Escape hatch so richer pickers reuse this instead of becoming bespoke. */
-  renderOption?: (option: SelectOption<T>) => React.ReactNode | undefined;
+  renderOption?: ((option: SelectOption<T>) => React.ReactNode) | undefined;
+  /** Fired as the list opens, for options that can change while the app is running. */
+  onOpen?: (() => void) | undefined;
   'aria-label'?: string | undefined;
 }
 
@@ -39,6 +41,7 @@ export function Select<T extends string | number>({
   placeholder = 'Select…',
   size = 'md',
   renderOption,
+  onOpen,
   'aria-label': ariaLabel,
 }: SelectProps<T>) {
   const [open, setOpen] = useState(false);
@@ -70,6 +73,7 @@ export function Select<T extends string | number>({
   const onKeyDown = (event: React.KeyboardEvent) => {
     if (!open && (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown')) {
       event.preventDefault();
+      onOpen?.();
       setOpen(true);
       return;
     }
@@ -101,7 +105,12 @@ export function Select<T extends string | number>({
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label={ariaLabel}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() =>
+          setOpen((current) => {
+            if (!current) onOpen?.();
+            return !current;
+          })
+        }
         onKeyDown={onKeyDown}
         className={cn(
           'flex w-full items-center justify-between gap-2 rounded-md border px-2.5',

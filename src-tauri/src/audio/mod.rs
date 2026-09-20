@@ -8,9 +8,11 @@ mod capture;
 mod device;
 mod level;
 mod resample;
+mod sources;
 mod speech;
 
 pub use capture::{Capture, Recording, MAX_RECORDING};
 pub use device::{list as list_microphones, MicrophoneInfo, TARGET_SAMPLE_RATE};
 pub use level::Level;
+pub use sources::Source;
 pub use speech::SpeechLevel;

@@ -7,7 +7,7 @@
 **Offline dictation for your desktop.**
 Hold a key, speak, and the text appears where you are already typing.
 
-[![Download](https://img.shields.io/badge/Download-v1.0.7-22A7CC?style=for-the-badge)](https://github.com/akashvaghela09/kiku/releases/latest)
+[![Download](https://img.shields.io/badge/Download-v1.1.2-22A7CC?style=for-the-badge)](https://github.com/akashvaghela09/kiku/releases/latest)
 [![Platforms](https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-1C8FAF?style=for-the-badge)](https://github.com/akashvaghela09/kiku/releases/latest)
 [![License](https://img.shields.io/badge/License-MIT-2A94B2?style=for-the-badge)](LICENSE)
 
@@ -22,10 +22,12 @@ Hold a key, speak, and the text appears where you are already typing.
 You are writing an email. Instead of typing the next paragraph, you hold a key, say it
 out loud, and let go. The words appear at your cursor.
 
-Everything happens on your own computer. Speech recognition runs locally, there is no
-account to create, and nothing you say is ever sent anywhere or written to disk as
-audio. The network is used exactly twice: once to download the speech model, and, if
-you leave the setting on, once a day to check whether a newer version exists.
+I built Kiku because every dictation tool I tried wanted an account, an internet
+connection, or both, for a job that a modern laptop can do on its own. Speech
+recognition here runs entirely on your machine. There is nothing to sign into, no audio
+is ever written to disk, and nothing you say leaves the computer. Kiku touches the
+network exactly twice: once to download the speech model, and, if you leave the setting
+on, once a day to ask whether a newer version exists.
 
 ## Shortcuts
 
@@ -36,21 +38,24 @@ you leave the setting on, once a day to check whether a newer version exists.
 | **Ctrl + Alt + Space** | Toggle, if you prefer a chord. |
 | **Escape** | Cancel without transcribing. |
 
-On macOS this is **Right Option**, because Mac keyboards have no right Control key.
+On macOS the hold key is **Right Option**, because Mac keyboards have no right Control
+key.
 
-One key is easier to hold than a chord, and no operating system uses Right Ctrl on its
-own. Kiku watches the key rather than capturing it, so Right Ctrl keeps working as
-Ctrl everywhere else, and **pressing any other key while holding cancels**. That is
-what stops Right Ctrl + C from copying and dictating at the same time.
+I picked a bare modifier because one key is far easier to hold than a chord, and no
+operating system claims Right Ctrl on its own. No platform will register a lone
+modifier as a shortcut, so Kiku watches the key instead of capturing it. Right Ctrl
+therefore keeps working as Ctrl everywhere else, and **pressing any other key while
+holding cancels the recording**. That is what stops Right Ctrl + C from copying and
+dictating at the same time.
 
-Every shortcut can be changed in Settings, which also offers an F9 / F10 preset and a
-Ctrl + Shift + Space chord.
+Every shortcut can be reassigned in Settings, which also offers F9 or F10 for a single
+key, and Ctrl + Shift + Space for a chord that no platform has claimed.
 
 ## Installing
 
-Kiku is not code signed. That is deliberate: certificates cost money every year and
-buy nothing for a tool you can build yourself from this repository. It does mean each
-operating system warns you once.
+Kiku is not code signed. That is a deliberate choice: certificates cost money every
+year and buy nothing for a tool you can build yourself from this repository. It does
+mean each operating system warns you once.
 
 <details>
 <summary><b>Linux</b></summary>
@@ -58,18 +63,18 @@ operating system warns you once.
 Download the AppImage, make it executable, and run it:
 
 ```sh
-chmod +x Kiku_1.0.7_amd64.AppImage
-./Kiku_1.0.7_amd64.AppImage
+chmod +x Kiku_1.1.2_amd64.AppImage
+./Kiku_1.1.2_amd64.AppImage
 ```
 
 Or install the Debian package:
 
 ```sh
-sudo apt install ./Kiku_1.0.7_amd64.deb
+sudo apt install ./Kiku_1.1.2_amd64.deb
 ```
 
-X11 only for now. Wayland needs portal based shortcuts and `uinput` for pasting, which
-is not built yet.
+X11 only for now. Wayland needs portal based shortcuts and `uinput` for pasting, and I
+have not built that yet.
 
 </details>
 
@@ -97,7 +102,7 @@ macOS will then ask for two permissions, both under Privacy & Security:
 
 ## Speech models
 
-Two, both English. Settings lets you download either one, switch between them, and
+Two, both English only. Settings lets you download either one, switch between them, and
 delete one to get the disk space back.
 
 | Model | Size | Notes |
@@ -105,20 +110,27 @@ delete one to get the disk space back.
 | **Standard** | 631 MB | The default. Around fifteen times faster than real time on four cores, and six times faster on one. |
 | **Compact** | 455 MB | Lighter on the processor and on disk, slightly less accurate. |
 
-There is **no GPU requirement**. That is the reason Kiku uses NVIDIA Parakeet rather
-than Whisper: it is more accurate on English, its cost scales with how long you
-actually spoke, and it stays silent when you do, instead of inventing words.
+Neither needs a GPU. I measured both engines before writing any of the application, and
+chose NVIDIA Parakeet over Whisper because it is more accurate on English, its cost
+scales with how long you actually spoke rather than with a fixed window, and it stays
+silent when you do instead of inventing words. The numbers behind that decision are in
+[`docs/CHUNK-0-RESULTS.md`](docs/CHUNK-0-RESULTS.md).
+
+Switching models takes a few seconds. Almost all of it is the ONNX runtime building its
+session, which no amount of threading improves, so Kiku tells you what it is doing
+rather than pretending to be quick.
 
 ## What else is in there
 
 - **History.** Every transcript, searchable, stored as text on your machine. Long ones
-  collapse to three lines with a Read more. Audio is never saved.
+  clamp to two lines with a Read more. Audio is never saved.
 - **A listening indicator.** A small capsule floats above whatever you are working in.
-  Its waveform responds to your voice, not to room noise: Kiku learns your
-  microphone's noise floor rather than assuming one.
+  Seven marks track your voice while you talk, then collapse into a pulse while the
+  text is being transcribed and pasted. They respond to speech rather than to room
+  noise, because Kiku learns your microphone's noise floor instead of assuming one.
 - **Sound cues** when listening starts and stops, switchable off.
-- **Privacy controls.** Pause history, delete one entry or all of them, or have
-  anything older than a chosen age removed automatically.
+- **Privacy controls.** Turn off Record history to stop saving transcripts, delete one
+  or all of them, or have anything older than 7, 30 or 90 days removed automatically.
 
 ## Building it yourself
 
@@ -138,19 +150,26 @@ sudo apt install libwebkit2gtk-4.1-dev libasound2-dev build-essential curl file 
 Useful commands:
 
 ```sh
+npm run check                    # eslint and tsc
+
 cd src-tauri
-cargo test                       # unit tests, no model or network needed
+cargo test --lib                 # unit tests, no model or network needed
 cargo test export_bindings       # regenerate src/lib/ipc/bindings.ts from Rust
 KIKU_TEST_NETWORK=1 cargo test   # includes the download test
 cargo clippy --all-targets -- -D warnings
 ```
 
+`src/lib/ipc/bindings.ts` is generated from the Rust command signatures and committed,
+so a fresh clone typechecks without a Rust build. CI regenerates it and fails if it
+differs, which is what stops a stale copy from quietly compiling.
+
 ## Continuous integration
 
-Every push to `master` builds installers for all three platforms and uploads them to
-the workflow run, downloadable for 30 days, so there is always something to test
-without building locally. Pushing a `v*` tag builds the same installers and attaches
-them to a draft release, so publishing stays a decision rather than a side effect.
+Every push to `master` builds installers for Windows, macOS and Linux and uploads them
+to the workflow run, where they stay downloadable for 30 days, so there is always
+something to test without building locally. Pushing a `v*` tag builds the same
+installers and attaches them to a **draft** release, so publishing stays a decision
+rather than a side effect.
 
 ## Under the hood
 
@@ -161,9 +180,9 @@ them to a draft release, so publishing stays a decision rather than a side effec
 | Storage | SQLite in your platform's application data directory |
 | Audio | 16 kHz mono capture, anti aliased resampling, adaptive noise floor |
 
-Design notes and the build log are in [`docs/`](docs/): `SCOPE.md` for what Kiku is and
-is not, `PLAN.md` for how it was built, and `CHUNK-0-RESULTS.md` for the measurements
-that chose the engine.
+The reasoning behind the bigger decisions lives in [`docs/`](docs/): `SCOPE.md` for what
+Kiku is and is not, `DESIGN.md` for the interface, `PLAN.md` for how it was built, and
+`CHUNK-0-RESULTS.md` for the measurements that chose the engine.
 
 ## Attribution
 

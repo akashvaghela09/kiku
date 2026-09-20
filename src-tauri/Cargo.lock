@@ -2536,7 +2536,7 @@ dependencies = [
 
 [[package]]
 name = "kiku"
-version = "1.0.7"
+version = "1.1.2"
 dependencies = [
  "cpal",
  "device_query",

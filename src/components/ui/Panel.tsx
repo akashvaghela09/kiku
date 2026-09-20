@@ -17,6 +17,11 @@ export interface PanelProps {
   icon?: LucideIcon | undefined;
   footer?: React.ReactNode | undefined;
   tone?: 'default' | 'accent' | 'warning' | 'danger' | undefined;
+  /**
+   * Remove the body's inset so children meet the panel's own edges. For a list whose
+   * rows carry full-bleed hover and hairline separators.
+   */
+  flush?: boolean | undefined;
   className?: string | undefined;
   children: React.ReactNode;
 }
@@ -42,6 +47,7 @@ export function Panel({
   icon: Icon,
   footer,
   tone = 'default',
+  flush = false,
   className,
   children,
 }: PanelProps) {
@@ -64,7 +70,14 @@ export function Panel({
         </header>
       )}
 
-      <div className={cn('px-1 pb-1', hasHeader ? 'pt-0' : 'pt-1')}>{children}</div>
+      <div
+        className={cn(
+          flush ? 'p-0' : 'px-1 pb-1',
+          !flush && (hasHeader ? 'pt-0' : 'pt-1'),
+        )}
+      >
+        {children}
+      </div>
 
       {footer && (
         <footer className="border-t border-border-subtle px-4 py-2.5">{footer}</footer>

@@ -36,64 +36,82 @@ body,
 }
 
 /**
- * Silence must not read as "crashed".
+ * Leaving, which the capsule previously did not do - it was unmounted between two
+ * frames, which reads as a glitch rather than as restraint.
  *
- * When nothing is being said the bars settle to their floor, and the container alone
- * breathes: one property, one element, one composited animation. The waveform sets
- * `data-speaking` as soon as there is real audio, and the pulse stops so the two
- * never fight.
+ * It departs downward as it arrived, closing the gesture, but travels half as far and
+ * barely scales: leaving should be less eventful than arriving. Specificity (0,2,0)
+ * beats `.capsule`, so this cleanly replaces the long-finished entrance, and because
+ * that entrance is `both`-filled at translateY(0) the handover has no jump.
  */
-.wave-bars {
-  animation: breathe 2400ms var(--ease-in-out) infinite;
+.capsule[data-exiting='true'] {
+  animation: capsule-exit 160ms var(--ease-out) both;
 }
 
-.wave-bars[data-speaking='true'] {
-  animation: none;
-  opacity: 1;
-}
-
-@keyframes breathe {
-  0%,
-  100% {
-    opacity: 0.55;
+@keyframes capsule-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
-  50% {
-    opacity: 0.85;
+  to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.96);
   }
 }
 
-.processing-dot {
-  animation: dot-pulse 1000ms var(--ease-in-out) infinite;
+/*
+ * Terminal states settle, they do not bounce. `--ease-spring` overshoots by design,
+ * which reads as the tool waking up on the way into listening - and as a 108px snap on
+ * the way into cancelled, which is a non-event.
+ */
+.capsule[data-state='cancelled'] {
+  transition-timing-function: var(--ease-out);
 }
 
-@keyframes dot-pulse {
+/*
+ * The resting pulse is not here. It is driven from the rAF loop in CapsuleMarks,
+ * because cancelling a CSS animation when speech starts jumps from mid-cycle to full
+ * opacity, and a transition cannot smooth that handover - a transition's start value
+ * excludes animation effects, so it computes 1 to 1 and never fires.
+ */
+
+/*
+ * Transcribing and pasting, on the same seven marks the waveform uses.
+ *
+ * Evenly phased rather than simultaneous, so the pulse travels the row once per cycle
+ * and reads as one motion instead of seven. The delay per mark is set inline; 140ms
+ * across seven spans 840ms of the 1000ms period, which leaves the wrap smooth.
+ *
+ * Scale is uniform, and a mark is exactly as tall as it is wide in this state, so it
+ * stays a true circle at every point in the cycle.
+ */
+.mark-pulse {
+  animation: mark-pulse 1000ms var(--ease-in-out) infinite;
+}
+
+@keyframes mark-pulse {
   0%,
   100% {
     opacity: 0.3;
-    transform: scale(0.8);
+    transform: scale(0.9);
   }
   40% {
     opacity: 1;
-    transform: scale(1);
+    transform: scale(1.4);
   }
 }
 
 /**
- * Reduced motion: the waveform keeps working - it answers "am I being heard?", which
- * is information, not decoration - but it drops to 10Hz in JavaScript and everything
- * decorative here stops.
+ * Reduced motion: the level meter keeps working - it answers "am I being heard?",
+ * which is information, not decoration - but it drops to 10Hz in JavaScript and
+ * everything decorative here stops.
  */
 @media (prefers-reduced-motion: reduce) {
   .capsule {
     animation: none;
   }
 
-  .wave-bars {
-    animation: none;
-    opacity: 0.85;
-  }
-
-  .processing-dot {
+  .mark-pulse {
     animation: none;
     opacity: 0.7;
   }

@@ -277,7 +277,7 @@ fn deliver(app: &AppHandle, transcript: crate::asr::Transcript) {
 /// dictation itself.
 fn record(app: &AppHandle, transcript: &crate::asr::Transcript) {
     let state = app.state::<AppState>();
-    if state.preferences().history_paused {
+    if !state.preferences().record_history {
         return;
     }
 

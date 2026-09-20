@@ -77,14 +77,19 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 
   const text = armed ? 'Click again to confirm' : (children ?? label);
 
+  // An icon-only button has nowhere to put the confirmation text, so it goes to the
+  // accessible name and the tooltip instead. Without this, arming a destructive
+  // icon button showed only a red tint and kept its original label.
+  const accessibleName = armed && iconOnly ? 'Click again to confirm' : label;
+
   return (
     <button
       ref={ref}
       type="button"
       onClick={handleClick}
       disabled={disabled ?? loading}
-      aria-label={iconOnly ? label : undefined}
-      title={iconOnly ? label : undefined}
+      aria-label={iconOnly ? accessibleName : undefined}
+      title={iconOnly ? accessibleName : undefined}
       className={cn(
         'inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md font-medium',
         'transition-colors duration-100',
@@ -95,6 +100,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         armed ? VARIANTS.danger : VARIANTS[variant],
         fullWidth && 'w-full',
         className,
+        // After className deliberately: a caller styling an icon button must not be
+        // able to hide the confirmation, which is the only signal that a destructive
+        // click has been armed.
+        armed && 'bg-danger-wash text-danger opacity-100',
       )}
       {...rest}
     >

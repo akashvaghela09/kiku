@@ -281,8 +281,11 @@ export type Preferences = {
 	trailingSpace: boolean,
 	/**  Play the short tones that mark listening starting and finishing. */
 	sounds: boolean,
-	/**  Stop recording dictations to history. The existing history is left alone. */
-	historyPaused: boolean,
+	/**
+	 *  Keep a record of each dictation. On by default; turning it off leaves the
+	 *  existing history alone and simply stops adding to it.
+	 */
+	recordHistory: boolean,
 	/**  Delete history entries older than this many days. `None` keeps everything. */
 	retentionDays: number | null,
 	/**  Ask GitHub once a day whether a newer release exists. Never downloads. */

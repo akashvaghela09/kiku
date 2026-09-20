@@ -1,15 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ClipboardCheck,
   Download,
-  History,
-  Info,
-  Keyboard,
-  Mic,
-  RefreshCw,
   Trash2,
-  Volume2,
-  Waves,
 } from 'lucide-react';
 
 import { Badge, Button, Dialog, Kbd, Panel, Progress, Row, Select, Toggle } from '@/components/ui';
@@ -23,7 +15,10 @@ import {
   type ModelInfo,
   type UpdateStatus,
 } from '@/lib/ipc';
+import { ViewToolbar } from '@/features/shell/ViewToolbar';
+import { VIEW_LABELS } from '@/features/shell/views';
 import { HotkeyField } from './HotkeyField';
+import { SETTINGS_SECTIONS } from './sections';
 import { usePreferences } from './usePreferences';
 
 /**
@@ -39,20 +34,17 @@ interface SettingsViewProps {
   bindings: HotkeyBindings;
   onBindingsChanged: () => void;
   onNotify: (message: string) => void;
+  /** Reports which section is in view, so the rail can show where you are. */
+  onSectionInView: (id: string) => void;
 }
 
-const SECTIONS = [
-  { id: 'shortcuts', label: 'Shortcuts', icon: Keyboard },
-  { id: 'microphone', label: 'Microphone', icon: Mic },
-  { id: 'model', label: 'Speech model', icon: Waves },
-  { id: 'output', label: 'Output', icon: ClipboardCheck },
-  { id: 'sounds', label: 'Sounds', icon: Volume2 },
-  { id: 'history', label: 'History', icon: History },
-  { id: 'updates', label: 'Updates', icon: RefreshCw },
-  { id: 'about', label: 'About', icon: Info },
-] as const;
 
-export function SettingsView({ bindings, onBindingsChanged, onNotify }: SettingsViewProps) {
+export function SettingsView({
+  bindings,
+  onBindingsChanged,
+  onNotify,
+  onSectionInView,
+}: SettingsViewProps) {
   const { preferences, update } = usePreferences();
   const [microphones, setMicrophones] = useState<MicrophoneInfo[]>([]);
   const [microphone, setMicrophone] = useState<string>('');
@@ -60,8 +52,15 @@ export function SettingsView({ bindings, onBindingsChanged, onNotify }: Settings
   const [info, setInfo] = useState<AppInfo | null>(null);
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: 'unknown' });
   const [confirmClear, setConfirmClear] = useState(false);
+  const [activeSection, setActiveSection] = useState<string | null>(null);
   const [busyModel, setBusyModel] = useState<string | null>(null);
   const [downloading, setDownloading] = useState<{ done: number; total: number } | null>(null);
+
+  const refreshMicrophones = useCallback(() => {
+    void commands.listMicrophones().then((result) => {
+      if (result.status === 'ok') setMicrophones(result.data);
+    });
+  }, []);
 
   useEffect(() => {
     void commands.listMicrophones().then((result) => {
@@ -94,6 +93,29 @@ export function SettingsView({ bindings, onBindingsChanged, onNotify }: Settings
     setBusyModel(null);
     setDownloading(null);
   };
+
+  // Scroll-spy: an eight-item list you cannot locate yourself in is half a
+  // navigation. The topmost section intersecting the viewport wins.
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (visible?.target.id) {
+          setActiveSection(visible.target.id);
+          onSectionInView(visible.target.id);
+        }
+      },
+      { rootMargin: '0px 0px -70% 0px', threshold: 0 },
+    );
+
+    for (const section of SETTINGS_SECTIONS) {
+      const element = document.getElementById(section.id);
+      if (element) observer.observe(element);
+    }
+    return () => observer.disconnect();
+  }, [onSectionInView]);
 
   useEffect(() => {
     const unlisten = events.downloadProgressed.listen((event) =>
@@ -138,25 +160,16 @@ export function SettingsView({ bindings, onBindingsChanged, onNotify }: Settings
   };
 
   return (
-    <div className="flex h-full">
-      <nav className="w-[180px] shrink-0 border-r border-border-subtle p-3">
-        <ul className="sticky top-3 space-y-0.5">
-          {SECTIONS.map((section) => (
-            <li key={section.id}>
-              <a
-                href={`#${section.id}`}
-                className="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-ui text-secondary hover:bg-surface-hover hover:text-primary"
-              >
-                <section.icon size={14} aria-hidden />
-                {section.label}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </nav>
+    <>
+      <ViewToolbar
+        title={VIEW_LABELS.settings}
+        meta={SETTINGS_SECTIONS.find((section) => section.id === activeSection)?.label}
+      />
 
-      <div className="min-h-0 flex-1 space-y-6 overflow-auto px-6 py-5">
-        <section id="shortcuts" className="scroll-mt-4">
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="app-column space-y-6 py-6">
+
+        <section id="shortcuts" className="scroll-mt-6">
           <Panel
             title="Shortcuts"
             description="Hold to talk, or press once to keep listening hands-free."
@@ -210,17 +223,19 @@ export function SettingsView({ bindings, onBindingsChanged, onNotify }: Settings
           </Panel>
         </section>
 
-        <section id="microphone" className="scroll-mt-4">
+        <section id="microphone" className="scroll-mt-6">
           <Panel title="Microphone">
             <Row
+              align="start"
               title="Input device"
-              description="Kiku follows your system default unless you pick one."
+              description="Kiku follows your system default unless you pick one. A Bluetooth headset only offers a microphone in its Handsfree profile - if yours is missing, switch it in your system sound settings and reopen this list."
               trailing={
                 <div className="w-64">
                   <Select
                     value={microphone}
                     options={microphoneOptions}
                     aria-label="Microphone"
+                    onOpen={refreshMicrophones}
                     onChange={(id) => {
                       setMicrophone(id);
                       void commands.setMicrophone(id || null);
@@ -232,7 +247,7 @@ export function SettingsView({ bindings, onBindingsChanged, onNotify }: Settings
           </Panel>
         </section>
 
-        <section id="model" className="scroll-mt-4">
+        <section id="model" className="scroll-mt-6">
           <Panel
             title="Speech model"
             description="Runs entirely on this computer. Downloaded once, then kept."
@@ -267,6 +282,12 @@ export function SettingsView({ bindings, onBindingsChanged, onNotify }: Settings
                 }
               />
             ))}
+            {busyModel && !downloading && (
+              <p className="px-3 pb-2 text-xs text-muted">
+                Loading the model into memory. This takes a few seconds and only
+                happens when you switch.
+              </p>
+            )}
             {downloading && (
               <div className="px-3 pb-2 pt-1">
                 <Progress
@@ -279,7 +300,7 @@ export function SettingsView({ bindings, onBindingsChanged, onNotify }: Settings
           </Panel>
         </section>
 
-        <section id="output" className="scroll-mt-4">
+        <section id="output" className="scroll-mt-6">
           <Panel
             title="Output"
             description="Your transcript always goes to the clipboard. Pasting is on top of that."
@@ -309,7 +330,7 @@ export function SettingsView({ bindings, onBindingsChanged, onNotify }: Settings
           </Panel>
         </section>
 
-        <section id="sounds" className="scroll-mt-4">
+        <section id="sounds" className="scroll-mt-6">
           <Panel title="Sounds">
             <Row
               title="Sound feedback"
@@ -341,19 +362,19 @@ export function SettingsView({ bindings, onBindingsChanged, onNotify }: Settings
           </Panel>
         </section>
 
-        <section id="history" className="scroll-mt-4">
+        <section id="history" className="scroll-mt-6">
           <Panel
             title="History"
             description="Transcripts are stored as text on this computer. No audio is ever kept."
           >
             <Row
-              title="Pause recording history"
-              description="Dictation keeps working; nothing new is saved."
+              title="Record history"
+              description="Keep a copy of each dictation. Turning this off leaves what is already saved alone."
               trailing={
                 <Toggle
-                  checked={preferences.historyPaused}
-                  onChange={(historyPaused) => update({ historyPaused })}
-                  aria-label="Pause history"
+                  checked={preferences.recordHistory}
+                  onChange={(recordHistory) => update({ recordHistory })}
+                  aria-label="Record history"
                 />
               }
             />
@@ -387,7 +408,7 @@ export function SettingsView({ bindings, onBindingsChanged, onNotify }: Settings
           </Panel>
         </section>
 
-        <section id="updates" className="scroll-mt-4">
+        <section id="updates" className="scroll-mt-6">
           <Panel
             title="Updates"
             description="Kiku never updates itself. It can check once a day whether a newer version exists and show a link."
@@ -420,7 +441,7 @@ export function SettingsView({ bindings, onBindingsChanged, onNotify }: Settings
           </Panel>
         </section>
 
-        <section id="about" className="scroll-mt-4">
+        <section id="about" className="scroll-mt-6">
           <Panel title="About">
             <Row
               title="Kiku"
@@ -434,6 +455,7 @@ export function SettingsView({ bindings, onBindingsChanged, onNotify }: Settings
             />
           </Panel>
         </section>
+        </div>
       </div>
 
       <Dialog
@@ -447,7 +469,7 @@ export function SettingsView({ bindings, onBindingsChanged, onNotify }: Settings
           void commands.clearHistory().then(() => onNotify('History deleted'));
         }}
       />
-    </div>
+    </>
   );
 }
 
@@ -484,7 +506,7 @@ function ModelActions({
     <>
       {!model.active && (
         <Button size="sm" loading={busy} onClick={onUse}>
-          Use this
+          {busy ? 'Loading' : 'Use this'}
         </Button>
       )}
       <Button

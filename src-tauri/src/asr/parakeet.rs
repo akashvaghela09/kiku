@@ -81,13 +81,21 @@ pub struct ParakeetEngine {
 
 impl ParakeetEngine {
     pub fn load(files: &ModelFiles, model_id: impl Into<String>) -> Result<Self> {
+        Self::load_with_threads(files, model_id, decode_threads())
+    }
+
+    /// Load with an explicit thread count. Exposed so the loader can be measured.
+    pub fn load_with_threads(
+        files: &ModelFiles,
+        model_id: impl Into<String>,
+        threads: i32,
+    ) -> Result<Self> {
         let as_str = |path: &Path| -> Result<String> {
             path.to_str().map(str::to_owned).ok_or_else(|| {
                 Error::ModelLoad(format!("path is not valid UTF-8: {}", path.display()))
             })
         };
 
-        let threads = decode_threads();
         let started = Instant::now();
 
         let recognizer = TransducerRecognizer::new(TransducerConfig {

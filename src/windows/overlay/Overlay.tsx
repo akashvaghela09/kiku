@@ -1,6 +1,6 @@
-import { Check, TriangleAlert, X } from 'lucide-react';
+import { TriangleAlert, X } from 'lucide-react';
 
-import { WaveBars } from '@/features/overlay/WaveBars';
+import { CapsuleMarks } from '@/features/overlay/CapsuleMarks';
 import { type CapsuleState, useOverlaySession } from '@/features/overlay/useOverlaySession';
 
 /**
@@ -16,11 +16,19 @@ import { type CapsuleState, useOverlaySession } from '@/features/overlay/useOver
  * about a surface we do not own.
  */
 
-/** Width of the capsule in each state, in pixels. */
+/**
+ * Width of the capsule in each state, in pixels.
+ *
+ * Listening, transcribing and pasting share one width because they share one row of
+ * marks: the marks change shape in place, and a capsule resizing underneath them would
+ * turn a single continuous gesture into three separate ones.
+ */
+const MARKS_WIDTH = 124;
+
 const WIDTH: Record<Exclude<CapsuleState, 'hidden'>, number> = {
-  listening: 168,
-  processing: 132,
-  done: 108,
+  listening: MARKS_WIDTH,
+  processing: MARKS_WIDTH,
+  done: MARKS_WIDTH,
   cancelled: 44,
   error: 260,
 };
@@ -28,7 +36,7 @@ const WIDTH: Record<Exclude<CapsuleState, 'hidden'>, number> = {
 const HEIGHT = 44;
 
 export function Overlay() {
-  const { state, message, levelRef } = useOverlaySession();
+  const { state, message, levelRef, exiting } = useOverlaySession();
 
   if (state === 'hidden') return null;
 
@@ -39,6 +47,7 @@ export function Overlay() {
     <div className="flex h-full w-full items-end justify-center" style={{ paddingBottom: 40 }}>
       <div
         data-state={state}
+        data-exiting={exiting ? 'true' : undefined}
         className="capsule flex items-center justify-center overflow-hidden"
         style={{
           width: WIDTH[state],
@@ -75,13 +84,14 @@ interface ContentsProps {
 function CapsuleContents({ state, message, levelRef }: ContentsProps) {
   switch (state) {
     case 'listening':
-      return <WaveBars levelRef={levelRef} />;
+      return <CapsuleMarks levelRef={levelRef} />;
 
+    // Transcribing and pasting are one continuous moment to the person waiting for
+    // their text, so they get one continuous animation: the same marks, collapsed to
+    // circles, pulsing along the row until the capsule leaves.
     case 'processing':
-      return <ProcessingDots />;
-
     case 'done':
-      return <Check size={18} strokeWidth={2.5} style={{ color: 'var(--ov-success)' }} />;
+      return <CapsuleMarks />;
 
     case 'cancelled':
       return <X size={14} strokeWidth={2.5} style={{ color: 'var(--ov-text)', opacity: 0.6 }} />;
@@ -111,23 +121,3 @@ function CapsuleContents({ state, message, levelRef }: ContentsProps) {
   }
 }
 
-/** Three dots, offset in phase so they read as one motion rather than three. */
-function ProcessingDots() {
-  return (
-    <div className="flex items-center gap-[6px]" aria-hidden>
-      {[0, 1, 2].map((index) => (
-        <span
-          key={index}
-          className="processing-dot"
-          style={{
-            width: 6,
-            height: 6,
-            borderRadius: 3,
-            background: 'var(--ov-bar)',
-            animationDelay: `${index * 140}ms`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}

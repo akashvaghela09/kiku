@@ -18,7 +18,6 @@ export { Select } from './Select';
 export { Slider } from './Slider';
 export { Toast } from './Toast';
 export { Toggle } from './Toggle';
-export { WaveBars } from '@/features/overlay/WaveBars';
 
 export type { BadgeProps } from './Badge';
 export type { ButtonProps } from './Button';

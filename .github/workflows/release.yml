@@ -75,6 +75,30 @@ jobs:
 
       - run: npm ci
 
+      # Windows has no rpath: a binary resolves its DLLs from its own directory, and a
+      # test binary lives in target/<profile>/deps. build.rs copies them there, but a
+      # build script only does that when it actually runs - on a cache hit cargo can
+      # consider it fresh while the cache has pruned the DLLs from target/, leaving the
+      # test binary to load whatever onnxruntime.dll the runner already has. That is
+      # why this failed as STATUS_ENTRYPOINT_NOT_FOUND (0xc0000139), a wrong library
+      # rather than a missing one, and why copying from build.rs alone was not enough.
+      #
+      # resources/lib is cached in its own right, so it is the one copy that survives
+      # whether or not the build script runs. The listing is here because the runner
+      # cannot be inspected any other way.
+      - name: Stage native libraries beside the test binaries
+        shell: bash
+        run: |
+          mkdir -p src-tauri/target/debug/deps
+          if compgen -G 'src-tauri/resources/lib/*' > /dev/null; then
+            cp -f src-tauri/resources/lib/* src-tauri/target/debug/deps/ || true
+          fi
+          echo '--- src-tauri/resources/lib ---'
+          ls -la src-tauri/resources/lib 2>/dev/null || echo '(absent)'
+          echo '--- native libraries in target/debug/deps ---'
+          ls -la src-tauri/target/debug/deps 2>/dev/null \
+            | grep -Ei '\.(dll|so|dylib)' || echo '(none)'
+
       # bindings.ts is generated from the Rust command signatures and committed, so a
       # fresh clone can typecheck without a Rust build. Regenerate it here and fail if
       # it differs: that is what stops a stale copy from quietly compiling.
@@ -133,9 +157,18 @@ jobs:
           name: kiku-${{ matrix.artifact }}
           retention-days: 30
           if-no-files-found: error
+          # Two shapes, because a build with an explicit --target writes to
+          # target/<triple>/release/bundle instead of target/release/bundle. macOS
+          # passes a target and so landed in the second form, which the first glob
+          # missed entirely - the build and the bundling had both succeeded.
           path: |
             src-tauri/target/release/bundle/**/*.AppImage
             src-tauri/target/release/bundle/**/*.deb
             src-tauri/target/release/bundle/**/*.dmg
             src-tauri/target/release/bundle/**/*.msi
             src-tauri/target/release/bundle/**/*-setup.exe
+            src-tauri/target/*/release/bundle/**/*.AppImage
+            src-tauri/target/*/release/bundle/**/*.deb
+            src-tauri/target/*/release/bundle/**/*.dmg
+            src-tauri/target/*/release/bundle/**/*.msi
+            src-tauri/target/*/release/bundle/**/*-setup.exe
