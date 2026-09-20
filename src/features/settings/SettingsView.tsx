@@ -12,10 +12,11 @@ import {
   Waves,
 } from 'lucide-react';
 
-import { Badge, Button, Dialog, Kbd, Panel, Row, Select, Toggle } from '@/components/ui';
+import { Badge, Button, Dialog, Kbd, Panel, Progress, Row, Select, Toggle } from '@/components/ui';
 import { formatBytes, isMac } from '@/lib/format';
 import {
   commands,
+  events,
   type AppInfo,
   type HotkeyBindings,
   type MicrophoneInfo,
@@ -59,6 +60,8 @@ export function SettingsView({ bindings, onBindingsChanged, onNotify }: Settings
   const [info, setInfo] = useState<AppInfo | null>(null);
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: 'unknown' });
   const [confirmClear, setConfirmClear] = useState(false);
+  const [busyModel, setBusyModel] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState<{ done: number; total: number } | null>(null);
 
   useEffect(() => {
     void commands.listMicrophones().then((result) => {
@@ -76,6 +79,30 @@ export function SettingsView({ bindings, onBindingsChanged, onNotify }: Settings
     void commands.checkForUpdate(false).then((result) => {
       if (result.status === 'ok') setUpdateStatus(result.data);
     });
+  }, []);
+
+  // Model actions all change what `listModels` would return, so each one refreshes
+  // the list rather than trying to patch it locally.
+  const act = async (id: string, run: () => Promise<{ status: string }>) => {
+    setBusyModel(id);
+    const result = await run();
+    if (result.status === 'error' && 'error' in result) {
+      onNotify((result as { error: { message: string } }).error.message);
+    }
+    const listed = await commands.listModels();
+    if (listed.status === 'ok') setModels(listed.data);
+    setBusyModel(null);
+    setDownloading(null);
+  };
+
+  useEffect(() => {
+    const unlisten = events.downloadProgressed.listen((event) =>
+      setDownloading({
+        done: event.payload.downloadedBytes,
+        total: event.payload.totalBytes,
+      }),
+    );
+    return () => void unlisten.then((off) => off());
   }, []);
 
   const microphoneOptions = useMemo(
@@ -208,27 +235,47 @@ export function SettingsView({ bindings, onBindingsChanged, onNotify }: Settings
         <section id="model" className="scroll-mt-4">
           <Panel
             title="Speech model"
-            description="Runs entirely on this computer. Downloaded once, then never again."
+            description="Runs entirely on this computer. Downloaded once, then kept."
           >
             {models.map((model) => (
               <Row
                 key={model.id}
+                align="start"
                 title={
                   <span className="flex items-center gap-2">
                     {model.name}
-                    {model.install.state === 'installed' && (
-                      <Badge tone="success">Installed</Badge>
+                    {model.active && <Badge tone="success">In use</Badge>}
+                    {!model.active && model.install.state === 'installed' && (
+                      <Badge>Downloaded</Badge>
                     )}
                   </span>
                 }
-                description={model.summary}
-                trailing={
-                  <span className="font-mono text-xs text-muted">
-                    {formatBytes(model.totalBytes)}
+                description={
+                  <span>
+                    {model.summary}
+                    <span className="ml-1.5 font-mono">{formatBytes(model.totalBytes)}</span>
                   </span>
+                }
+                trailing={
+                  <ModelActions
+                    model={model}
+                    busy={busyModel === model.id}
+                    onDownload={() => void act(model.id, () => commands.downloadModel(model.id))}
+                    onUse={() => void act(model.id, () => commands.useModel(model.id))}
+                    onDelete={() => void act(model.id, () => commands.deleteModel(model.id))}
+                  />
                 }
               />
             ))}
+            {downloading && (
+              <div className="px-3 pb-2 pt-1">
+                <Progress
+                  value={downloading.total > 0 ? downloading.done / downloading.total : undefined}
+                  label="Downloading"
+                  detail={`${formatBytes(downloading.done)} of ${formatBytes(downloading.total)}`}
+                />
+              </div>
+            )}
           </Panel>
         </section>
 
@@ -401,6 +448,56 @@ export function SettingsView({ bindings, onBindingsChanged, onNotify }: Settings
         }}
       />
     </div>
+  );
+}
+
+/**
+ * Download, switch and delete for one model.
+ *
+ * Deleting is the point of showing the size: a model that is not in use is several
+ * hundred megabytes sitting on disk for nothing.
+ */
+function ModelActions({
+  model,
+  busy,
+  onDownload,
+  onUse,
+  onDelete,
+}: {
+  model: ModelInfo;
+  busy: boolean;
+  onDownload: () => void;
+  onUse: () => void;
+  onDelete: () => void;
+}) {
+  const installed = model.install.state === 'installed';
+
+  if (!installed) {
+    return (
+      <Button size="sm" icon={Download} loading={busy} onClick={onDownload}>
+        {model.install.state === 'partial' ? 'Resume' : 'Download'}
+      </Button>
+    );
+  }
+
+  return (
+    <>
+      {!model.active && (
+        <Button size="sm" loading={busy} onClick={onUse}>
+          Use this
+        </Button>
+      )}
+      <Button
+        size="sm"
+        variant="ghost"
+        icon={Trash2}
+        iconOnly
+        destructive
+        label={`Delete ${model.name}`}
+        disabled={busy}
+        onClick={onDelete}
+      />
+    </>
   );
 }
 

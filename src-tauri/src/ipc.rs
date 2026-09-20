@@ -6,7 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 use specta::Type;
-use tauri::State;
+use tauri::{Manager, State};
 use tauri_specta::Event;
 
 use crate::asr::{EngineStatus, Transcript};
@@ -66,12 +66,19 @@ pub struct ModelInfo {
     /// See `DownloadProgress` for why byte counts cross the boundary as `u32`.
     pub total_bytes: u32,
     pub install: InstallState,
+    /// Whether this is the model the recogniser currently has loaded.
+    pub active: bool,
 }
 
 /// Every model Kiku can install, with what is on disk right now.
 #[tauri::command]
 #[specta::specta]
 pub fn list_models(state: State<'_, AppState>) -> CommandResult<Vec<ModelInfo>> {
+    let loaded = match state.asr.status() {
+        EngineStatus::Ready(id) => Some(id),
+        _ => None,
+    };
+
     Ok(models::ALL
         .iter()
         .map(|spec| ModelInfo {
@@ -80,6 +87,7 @@ pub fn list_models(state: State<'_, AppState>) -> CommandResult<Vec<ModelInfo>> 
             summary: spec.summary.to_owned(),
             total_bytes: spec.total_bytes().min(u64::from(u32::MAX)) as u32,
             install: state.models.state(spec),
+            active: loaded.as_deref() == Some(spec.id),
         })
         .collect())
 }
@@ -108,13 +116,65 @@ pub async fn download_model(
     Ok(())
 }
 
-/// Remove an installed model, including any interrupted download.
+/// Remove an installed model, freeing its disk space.
+///
+/// If it is the model currently loaded, the recogniser is unloaded first and another
+/// installed model is loaded in its place — deleting one model must not leave
+/// dictation broken when another is available.
 #[tauri::command]
 #[specta::specta]
-pub fn delete_model(state: State<'_, AppState>, model_id: String) -> CommandResult<()> {
+pub async fn delete_model(app: tauri::AppHandle, model_id: String) -> CommandResult<()> {
     let spec = models::find(&model_id)
         .ok_or_else(|| Error::Internal(format!("unknown model {model_id}")))?;
-    Ok(state.models.delete(spec)?)
+
+    {
+        let state = app.state::<AppState>();
+        let in_use = matches!(state.asr.status(), EngineStatus::Ready(ref id) if *id == model_id);
+        if in_use {
+            state.asr.unload();
+        }
+        state.models.delete(spec)?;
+
+        // Forget a preference that now names nothing.
+        let mut preferences = state.preferences();
+        if preferences.model_id.as_deref() == Some(model_id.as_str()) {
+            preferences.model_id = None;
+            state.set_preferences(preferences);
+        }
+    }
+
+    let handle = app.clone();
+    tauri::async_runtime::spawn_blocking(move || crate::load_model(&handle, None));
+    Ok(())
+}
+
+/// Switch to a different installed model.
+///
+/// Returns once the model is loaded, since the caller wants to know when dictation is
+/// usable again rather than when the request was accepted.
+#[tauri::command]
+#[specta::specta]
+pub async fn use_model(app: tauri::AppHandle, model_id: String) -> CommandResult<EngineStatus> {
+    let spec = models::find(&model_id)
+        .ok_or_else(|| Error::Internal(format!("unknown model {model_id}")))?;
+
+    {
+        let state = app.state::<AppState>();
+        if !state.models.is_installed(spec) {
+            return Err(Error::ModelMissing.into());
+        }
+        let mut preferences = state.preferences();
+        preferences.model_id = Some(model_id.clone());
+        state.set_preferences(preferences);
+    }
+
+    let handle = app.clone();
+    let id = model_id.clone();
+    tauri::async_runtime::spawn_blocking(move || crate::load_model(&handle, Some(&id)))
+        .await
+        .map_err(|error| Error::Internal(error.to_string()))?;
+
+    Ok(app.state::<AppState>().asr.status())
 }
 
 /// Re-hash an installed model against its pinned checksums.

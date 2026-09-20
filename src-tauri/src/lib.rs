@@ -40,6 +40,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
             ipc::list_models,
             ipc::download_model,
             ipc::delete_model,
+            ipc::use_model,
             ipc::verify_model,
             ipc::engine_status,
             ipc::hotkey_bindings,
@@ -146,30 +147,48 @@ fn apply_retention(app: &tauri::AppHandle) {
 /// that does not paint until it finishes, so it runs on a blocking worker and the UI
 /// follows `EngineStatusChanged` instead.
 fn load_model_in_background(app: tauri::AppHandle) {
+    tauri::async_runtime::spawn_blocking(move || {
+        let preferred = app.state::<AppState>().preferences().model_id;
+        load_model(&app, preferred.as_deref());
+    });
+}
+
+/// Load a model into the recogniser, blocking until it is ready.
+///
+/// `preferred` picks a specific model; without one, whichever is installed wins. A
+/// preference naming a model that is no longer installed falls back rather than
+/// failing, because deleting a model must not leave dictation broken when another one
+/// is still there.
+pub(crate) fn load_model(app: &tauri::AppHandle, preferred: Option<&str>) {
     use crate::asr::ModelFiles;
     use tauri_specta::Event;
 
-    tauri::async_runtime::spawn_blocking(move || {
-        let state = app.state::<AppState>();
+    let state = app.state::<AppState>();
 
-        let Some(spec) = models::ALL
-            .iter()
-            .find(|spec| state.models.is_installed(spec))
-        else {
-            tracing::info!("no model installed yet; onboarding will download one");
-            let _ = ipc::EngineStatusChanged(state.asr.status()).emit(&app);
-            return;
-        };
+    let chosen = preferred
+        .and_then(models::find)
+        .filter(|spec| state.models.is_installed(spec))
+        .or_else(|| {
+            models::ALL
+                .iter()
+                .find(|spec| state.models.is_installed(spec))
+        });
 
-        let dir = state.models.dir_for(spec);
-        let result = ModelFiles::discover(&dir).and_then(|files| state.asr.load(&files, spec.id));
+    let Some(spec) = chosen else {
+        tracing::info!("no model installed yet; onboarding will download one");
+        state.asr.unload();
+        let _ = ipc::EngineStatusChanged(state.asr.status()).emit(app);
+        return;
+    };
 
-        if let Err(error) = result {
-            tracing::error!(%error, model = spec.id, "could not load the speech model");
-        }
+    let dir = state.models.dir_for(spec);
+    let result = ModelFiles::discover(&dir).and_then(|files| state.asr.load(&files, spec.id));
 
-        let _ = ipc::EngineStatusChanged(state.asr.status()).emit(&app);
-    });
+    if let Err(error) = result {
+        tracing::error!(%error, model = spec.id, "could not load the speech model");
+    }
+
+    let _ = ipc::EngineStatusChanged(state.asr.status()).emit(app);
 }
 
 #[cfg(test)]

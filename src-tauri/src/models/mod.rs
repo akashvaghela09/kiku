@@ -5,5 +5,5 @@ mod registry;
 mod store;
 
 pub use download::{download, DownloadProgress};
-pub use registry::{find, ModelSpec, ALL, DEFAULT};
+pub use registry::{find, ModelSpec, RemoteFile, ALL, DEFAULT};
 pub use store::{InstallState, ModelStore};

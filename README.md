@@ -61,12 +61,21 @@ macOS also asks for two permissions, both under Privacy & Security:
 - **Accessibility** — to paste into other applications. Without it, transcripts still
   reach your clipboard and you paste them yourself.
 
+## Speech models
+
+Two, both English, both downloaded on first run and then kept. Settings lets you
+download either, switch between them, and delete one to get the disk space back.
+
+| | Size | |
+|---|---|---|
+| **Standard** | 631 MB | The default. Parakeet TDT 0.6B v2 — around fifteen times faster than real time on four cores, and six times faster on one |
+| **Compact** | 455 MB | Parakeet TDT 110M. Lighter on the processor and on disk, a little less accurate |
+
 ## What it needs
 
-- About 700 MB of disk for the speech model, downloaded on first run.
-- A CPU from roughly the last decade. There is no GPU requirement: the model runs
-  around fifteen times faster than real time on four cores, and six times faster on
-  one.
+- Disk space for one model, from the table above.
+- A CPU from roughly the last decade. There is no GPU requirement at all — that is why
+  Kiku uses Parakeet rather than Whisper.
 
 ## Building it yourself
 
@@ -98,8 +107,9 @@ cargo clippy --all-targets -- -D warnings
 
 | | |
 |---|---|
-| Recognition | [NVIDIA Parakeet TDT 0.6B v2](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) through [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx), CPU only |
+| Recognition | [NVIDIA Parakeet](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) through [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx), CPU only |
 | Sound | Two short cues in `assets/sounds/` — listening started and stopped — embedded in the binary. Switchable off in Settings |
+| Privacy | No account, no telemetry, no audio ever written to disk |
 | Shell | Tauri 2 · Rust · React · TypeScript · Tailwind |
 | Storage | SQLite, in your platform's application data directory |
 | History | Text only. Audio is never written to disk |

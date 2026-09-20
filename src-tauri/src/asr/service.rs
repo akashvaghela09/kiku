@@ -95,6 +95,15 @@ impl AsrService {
         }
     }
 
+    /// Drop the loaded model, freeing its memory.
+    ///
+    /// Used when the model it came from is deleted: continuing to transcribe with an
+    /// engine whose files no longer exist would work, but would report a model the
+    /// user has just removed.
+    pub fn unload(&self) {
+        self.set(State::Unloaded);
+    }
+
     /// Transcribe 16 kHz mono audio with the warm engine.
     pub fn transcribe(&self, samples: &[f32]) -> Result<Transcript> {
         let mut state = self
@@ -136,6 +145,18 @@ mod tests {
         let service = AsrService::new();
         let error = service.transcribe(&[0.0; 16_000]).unwrap_err();
         assert!(matches!(error, Error::ModelMissing));
+    }
+
+    #[test]
+    fn unloading_returns_the_service_to_asking_for_a_model() {
+        let service = AsrService::new();
+        service.set(State::Failed("something".into()));
+        service.unload();
+        assert!(matches!(service.status(), EngineStatus::Unloaded));
+        assert!(matches!(
+            service.transcribe(&[0.0; 16]).unwrap_err(),
+            Error::ModelMissing
+        ));
     }
 
     #[test]

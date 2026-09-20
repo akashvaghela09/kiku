@@ -36,6 +36,9 @@ pub struct Preferences {
     pub retention_days: Option<u32>,
     /// Ask GitHub once a day whether a newer release exists. Never downloads.
     pub check_for_updates: bool,
+    /// Which model to load. `None` means "whichever is installed", which is what a
+    /// fresh install and a single-model setup both want.
+    pub model_id: Option<String>,
 }
 
 impl Default for Preferences {
@@ -47,6 +50,7 @@ impl Default for Preferences {
             history_paused: false,
             retention_days: None,
             check_for_updates: true,
+            model_id: None,
         }
     }
 }

@@ -9,6 +9,7 @@ const FALLBACK: Preferences = {
   historyPaused: false,
   retentionDays: null,
   checkForUpdates: true,
+  modelId: null,
 };
 
 /**

@@ -5,10 +5,10 @@
 //! carries the SHA-256 it must hash to. The hashes below are Hugging Face's own LFS
 //! object ids, verified against a local download.
 //!
-//! There is one entry today. Chunk 0 measured the 0.6B model at six times real time on
-//! a *single* thread, so the lighter 110M variant was deferred: a machine too slow for
-//! this is too slow for a webview. The shape stays plural because adding a second entry
-//! should be data, not code.
+//! Two entries. The 0.6B is the default and is what chunk 0 measured at eleven to
+//! nineteen times real time; the 110M is there for older machines and for anyone who
+//! would rather not keep 631 MB on disk. Both are transducers, so both load through
+//! the same engine — adding one was data, not code.
 
 /// One file within a model export.
 #[derive(Debug, Clone, Copy)]
@@ -77,8 +77,38 @@ pub const PARAKEET_060B_V2: ModelSpec = ModelSpec {
     ],
 };
 
+pub const PARAKEET_110M: ModelSpec = ModelSpec {
+    id: "parakeet-tdt-transducer-110m",
+    name: "Compact",
+    summary: "English. Smaller and lighter on the processor, a little less accurate.",
+    repo: "csukuangfj/sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000",
+    revision: "e9bea5a06247dc3f55319ff23d34b0328f2f5ddf",
+    files: &[
+        RemoteFile {
+            path: "encoder.onnx",
+            sha256: "db260f1073c654c37dd65006885d1ee98ff16c22463b1ef992bbcabc29780a3f",
+            bytes: 456_050_698,
+        },
+        RemoteFile {
+            path: "decoder.onnx",
+            sha256: "3da156bde41a04c94ef783e0bd92928e9974e08645b976a22d0c3e1063510249",
+            bytes: 15_753_086,
+        },
+        RemoteFile {
+            path: "joiner.onnx",
+            sha256: "b603765c0724a0768c378a23326dabbeb9cfea932d260e4fcc14384fa5fd5aff",
+            bytes: 5_596_854,
+        },
+        RemoteFile {
+            path: "tokens.txt",
+            sha256: "450e56bd2f036fe5b6aa821865838cc5aa9d8b0106134ce9a9ba0664abe6cd10",
+            bytes: 9_953,
+        },
+    ],
+};
+
 /// Everything installable, in the order Settings should present it.
-pub const ALL: &[ModelSpec] = &[PARAKEET_060B_V2];
+pub const ALL: &[ModelSpec] = &[PARAKEET_060B_V2, PARAKEET_110M];
 
 /// The model a fresh install gets.
 pub const DEFAULT: &ModelSpec = &PARAKEET_060B_V2;
@@ -142,5 +172,30 @@ mod tests {
         // Around 630 MB. A wildly different number means an entry was edited by hand.
         let mb = DEFAULT.total_bytes() / 1_048_576;
         assert!((600..700).contains(&mb), "unexpected total: {mb} MB");
+    }
+
+    #[test]
+    fn every_model_declares_a_plausible_total_size() {
+        for spec in ALL {
+            let mb = spec.total_bytes() / 1_048_576;
+            assert!((100..2000).contains(&mb), "{} is {mb} MB", spec.id);
+        }
+    }
+
+    #[test]
+    fn the_compact_model_is_actually_smaller_than_the_default() {
+        assert!(
+            PARAKEET_110M.total_bytes() < PARAKEET_060B_V2.total_bytes(),
+            "the compact model has to be worth choosing"
+        );
+    }
+
+    #[test]
+    fn names_are_distinct_so_settings_can_tell_them_apart() {
+        let mut names: Vec<_> = ALL.iter().map(|spec| spec.name).collect();
+        names.sort_unstable();
+        let count = names.len();
+        names.dedup();
+        assert_eq!(names.len(), count, "two models share a name");
     }
 }

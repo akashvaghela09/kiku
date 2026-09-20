@@ -1,9 +1,24 @@
+# Dependencies and build output
 node_modules/
 dist/
 target/
-*.local
-.DS_Store
 .vite/
 
-# Generated from the Rust command signatures by tauri-specta; never hand-edited.
+# Rust build artefacts anywhere in the tree, including the chunk-0 spike. These were
+# committed once, before this file existed, and cost 717 MB.
+**/target/
+
+# Generated from the Rust command signatures by tauri-specta; never hand-edited, and a
+# stale checked-in copy is worse than none because it still compiles.
 src/lib/ipc/bindings.ts
+
+# Tauri generates these from tauri.conf.json at build time.
+src-tauri/gen/
+
+# Worktrees and caches created by other tooling
+.kilo/
+
+# Local scratch
+*.local
+*.log
+.DS_Store
