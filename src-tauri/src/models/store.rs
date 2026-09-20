@@ -57,7 +57,7 @@ impl ModelStore {
 
     /// Cheap check: are all files present at the right size?
     ///
-    /// Size is a weak guarantee but a free one, and it catches the common failures —
+    /// Size is a weak guarantee but a free one, and it catches the common failures -
     /// a truncated download, a file deleted by a disk cleaner. Content corruption is
     /// what `verify` is for.
     pub fn state(&self, spec: &ModelSpec) -> InstallState {
@@ -107,7 +107,7 @@ impl ModelStore {
             let actual = hash_file(&path)?;
             if actual != file.sha256 {
                 return Err(Error::ModelLoad(format!(
-                    "{} failed its integrity check — the download is corrupt.",
+                    "{} failed its integrity check - the download is corrupt.",
                     file.path
                 )));
             }

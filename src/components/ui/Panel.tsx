@@ -6,7 +6,7 @@ import { cn } from '@/lib/cn';
  * A titled group of rows.
  *
  * One component covers every settings group, every onboarding card and the macOS
- * permission callout — the tone prop is what turns it into a callout, rather than a
+ * permission callout - the tone prop is what turns it into a callout, rather than a
  * second component that would drift from this one.
  */
 export interface PanelProps {

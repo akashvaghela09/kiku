@@ -119,7 +119,7 @@ pub async fn download_model(
 /// Remove an installed model, freeing its disk space.
 ///
 /// If it is the model currently loaded, the recogniser is unloaded first and another
-/// installed model is loaded in its place — deleting one model must not leave
+/// installed model is loaded in its place - deleting one model must not leave
 /// dictation broken when another is available.
 #[tauri::command]
 #[specta::specta]
@@ -179,7 +179,7 @@ pub async fn use_model(app: tauri::AppHandle, model_id: String) -> CommandResult
 
 /// Re-hash an installed model against its pinned checksums.
 ///
-/// Slow by design — this is the repair path, not a startup check.
+/// Slow by design - this is the repair path, not a startup check.
 #[tauri::command]
 #[specta::specta]
 pub async fn verify_model(state: State<'_, AppState>, model_id: String) -> CommandResult<()> {
@@ -367,7 +367,7 @@ pub fn preview_sound(cue: SoundCue) -> CommandResult<()> {
 /// Whether a newer Kiku has been published.
 ///
 /// Uses a result cached for a day unless `force` is set, and reports `Unknown` rather
-/// than an error when offline — a failed update check is not something to interrupt
+/// than an error when offline - a failed update check is not something to interrupt
 /// someone about.
 #[tauri::command]
 #[specta::specta]

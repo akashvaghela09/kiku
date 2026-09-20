@@ -29,7 +29,7 @@ pub struct Recording {
     pub device_name: String,
     /// True when the recording was cut short by `MAX_RECORDING`.
     pub truncated: bool,
-    /// True when any buffer reached full scale — the input gain is too high.
+    /// True when any buffer reached full scale - the input gain is too high.
     pub clipped: bool,
 }
 

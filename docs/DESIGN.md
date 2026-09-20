@@ -1,4 +1,4 @@
-# kiku — Design Direction
+# kiku - Design Direction
 
 **Version** 1.0 · **Status** Proposed, opinionated · **Scope** Overlay, Main window, Settings, Onboarding
 **Stack** Tauri 2 · React · TypeScript · Tailwind · Lucide only · Light + dark following OS
@@ -9,7 +9,7 @@
 
 > kiku is a **system instrument**, not an app. The user's attention belongs to the document they are
 > dictating into; kiku's entire visual job is to confirm, peripherally and without being looked at,
-> that it is listening — and then to get out of the way.
+> that it is listening - and then to get out of the way.
 
 Everything below is derived from that sentence. Where a decision could go either way, it goes toward
 *less presence*.
@@ -20,12 +20,12 @@ Everything below is derived from that sentence. Where a decision could go either
 
 ### P1. The overlay is read peripherally, never focally.
 A user in flow does not look at the overlay. They perceive a change in the corner of their eye and
-keep talking. Anything that requires foveal vision to decode — text, small icons, numeric levels,
-multi-colour states — has failed.
+keep talking. Anything that requires foveal vision to decode - text, small icons, numeric levels,
+multi-colour states - has failed.
 
 **Implication:** the listening state contains **zero text and zero icons**. It is a shape and a
 motion. State is encoded in *silhouette* (width), *motion signature* (moving vs. pulsing vs. static),
-and *one* colour shift — in that priority order. If the overlay were rendered at 25% scale and blurred
+and *one* colour shift - in that priority order. If the overlay were rendered at 25% scale and blurred
 by 4px, a user must still be able to name the state. That is the acceptance test for every overlay
 state we ship.
 
@@ -33,8 +33,8 @@ state we ship.
 Speech recognition takes what it takes. The *feedback* must not. The gap between physical key-down and
 first pixel is the single number that decides whether kiku feels premium or cheap.
 
-**Implication:** the overlay OS window is created at app launch and kept alive and hidden forever —
-never created on demand (X11 window creation is 30–120ms; that is 4–7 dropped frames the user reads as
+**Implication:** the overlay OS window is created at app launch and kept alive and hidden forever -
+never created on demand (X11 window creation is 30-120ms; that is 4-7 dropped frames the user reads as
 lag). Showing it is `setVisible(true)` plus one CSS class toggle. Budget: **≤ 16ms key-down → first
 paint**. Correspondingly, the `processing` state is never allowed to be instantaneous-and-invisible:
 if the transcript returns in under 180ms we still hold `processing` for 180ms, because a state that
@@ -44,7 +44,7 @@ flashes for 3 frames reads as a glitch, not as speed.
 The webview and the ASR run on the same machine at the same moment. A 32px backdrop blur on a
 400×400 region is not free; neither are eleven simultaneous keyframe animations.
 
-**Implication:** a hard rule — **only `opacity` and `transform` animate**, with exactly one sanctioned
+**Implication:** a hard rule - **only `opacity` and `transform` animate**, with exactly one sanctioned
 exception (the overlay capsule's `width`, on a ≤260px element). No `backdrop-filter` anywhere. No
 animated `box-shadow`, `filter`, `border-radius`, or `height`. Maximum **two** concurrent animations
 process-wide while `listening` is active. The main window's render loops pause on blur.
@@ -54,18 +54,18 @@ process-wide while `listening` is active. The main window's render loops pause o
 communicated only through aesthetic restraint are not communicated.
 
 **Implication:** every place where the app touches the network or the disk says so, inline, in plain
-sentences, at the point of the control — not in an About box. The update-check toggle carries the line
+sentences, at the point of the control - not in an About box. The update-check toggle carries the line
 *"Checks a version number once a day. Sends nothing about you."* The history section carries
 *"Text only. Audio is discarded the moment it is transcribed."* This is copy as UI, and the copy is
 part of the design spec, not filler.
 
-### P5. Small surface, deep polish — refuse the second thing.
+### P5. Small surface, deep polish - refuse the second thing.
 Four surfaces, roughly twenty settings, one primary interaction. The owner has rejected feature creep;
 design must hold that line by making the existing set *feel finished* rather than by adding.
 
 **Implication:** a deliberately tiny component set (14 primitives, §6) and a rule that no surface gets
 a control the other surfaces cannot reuse. Concretely: no dashboard, no stats, no streaks, no "recent
-apps", no AI post-processing UI, no vocabulary manager, no cloud sync affordance — not even a disabled
+apps", no AI post-processing UI, no vocabulary manager, no cloud sync affordance - not even a disabled
 one. **One exception I am arguing for, in §11.2: inline editing of a transcript.** It is error
 recovery for the product's core failure mode, not a feature.
 
@@ -106,7 +106,7 @@ reads as one family with the mark.
 | 900 | `#184E60` | accent wash on dark |
 | 950 | `#0D3140` | accent wash on dark, subtle |
 
-### 2.3 Neutral ramp (`ink`) — hue-tinted ~205° so neutrals belong to the cyan family
+### 2.3 Neutral ramp (`ink`) - hue-tinted ~205° so neutrals belong to the cyan family
 
 | Step | Hex | | Step | Hex |
 |---|---|---|---|---|
@@ -119,7 +119,7 @@ reads as one family with the mark.
 | 400 | `#94A3AE` | | 950 | `#10151A` |
 | 500 | `#64727E` | | 1000| `#0A0E12` |
 
-### 2.4 Status ramps (minimal — two steps each, light fill + dark fill)
+### 2.4 Status ramps (minimal - two steps each, light fill + dark fill)
 
 ```
 success   light #0F7A55   dark #3DDC97   wash-light #E6F7F0   wash-dark #08281D
@@ -139,7 +139,7 @@ Note the deliberate absence of an "info" colour: info *is* the accent. One fewer
 
   /* ---- surfaces ---- */
   --surface:          #FFFFFF;  /* window background */
-  --surface-raised:   #FFFFFF;  /* cards, popovers — same, separated by border not fill */
+  --surface-raised:   #FFFFFF;  /* cards, popovers - same, separated by border not fill */
   --surface-sunken:   #F6F8FA;  /* list wells, code/transcript blocks, inputs */
   --surface-hover:    #F6F8FA;
   --surface-active:   #EDF1F4;
@@ -156,7 +156,7 @@ Note the deliberate absence of an "info" colour: info *is* the accent. One fewer
   --text-primary:   #191F25;  /* 17.0:1 on surface */
   --text-secondary: #53616C;  /*  6.4:1 on surface */
   --text-muted:     #64727E;  /*  5.0:1 on surface */
-  --text-disabled:  #94A3AE;  /*  2.7:1 — non-text / disabled only */
+  --text-disabled:  #94A3AE;  /*  2.7:1 - non-text / disabled only */
   --text-on-accent: #FFFFFF;  /*  5.4:1 on --accent */
   --text-accent:    #17738F;  /*  5.6:1 on surface */
 
@@ -212,7 +212,7 @@ Note the deliberate absence of an "info" colour: info *is* the accent. One fewer
   --text-primary:   #E6EDF3;  /* 15.0:1 on surface */
   --text-secondary: #A3B1BC;  /*  8.1:1 */
   --text-muted:     #7A8894;  /*  4.9:1 */
-  --text-disabled:  #53616C;  /*  2.4:1 — non-text only */
+  --text-disabled:  #53616C;  /*  2.4:1 - non-text only */
   --text-on-accent: #08191F;  /* dark ink on light-cyan fill: 9.6:1 */
   --text-accent:    #38BDE0;  /*  8.1:1 */
 
@@ -235,13 +235,13 @@ Note the deliberate absence of an "info" colour: info *is* the accent. One fewer
 }
 ```
 
-**Overlay palette — deliberately theme-independent.** See §5.2 for the justification.
+**Overlay palette - deliberately theme-independent.** See §5.2 for the justification.
 
 ```css
 :root {
   --ov-bg:        rgb(16 21 26 / 0.94);   /* ink-950 @ 94% */
   --ov-hairline:  rgb(255 255 255 / 0.10);
-  --ov-bar:       #38BDE0;                /* cyan-400 — reads on light and dark backdrops */
+  --ov-bar:       #38BDE0;                /* cyan-400 - reads on light and dark backdrops */
   --ov-bar-idle:  rgb(56 189 224 / 0.45);
   --ov-text:      #E6EDF3;
   --ov-danger:    #FF7A6B;
@@ -258,20 +258,20 @@ Measured WCAG 2.1 contrast, sRGB.
 |---|---|---|---|
 | text-primary / surface | 17.0 | 15.0 | AAA |
 | text-secondary / surface | 6.4 | 8.1 | AA (AAA for ≥18.66px) |
-| text-muted / surface | 5.0 | 4.9 | AA — this is the floor; never go lighter for real text |
+| text-muted / surface | 5.0 | 4.9 | AA - this is the floor; never go lighter for real text |
 | text-accent / surface | 5.6 | 8.1 | AA |
 | text-on-accent / accent | 5.4 | 9.6 | AA |
-| border-strong / surface | 2.1 | 2.0 | AA non-text (≥3:1 required only for *focusable* boundaries — see below) |
+| border-strong / surface | 2.1 | 2.0 | AA non-text (≥3:1 required only for *focusable* boundaries - see below) |
 | ring / surface | 3.9 | 6.3 | AA non-text |
-| ov-text / ov-bg | 13.1 | — | AAA |
-| ov-bar / ov-bg | 8.4 | — | AAA |
+| ov-text / ov-bg | 13.1 | - | AAA |
+| ov-bar / ov-bg | 8.4 | - | AAA |
 
 Two rules that fall out of this table and must be enforced in review:
 
 1. **`--brand-cyan` (#22A7CC) may never carry text and may never be a text-bearing fill.** It is 2.8:1
    with white. It exists for the mark and the waveform bars, both of which sit on near-black.
 2. **`--text-disabled` is not text.** A disabled control's *label* uses `--text-muted` at 60% opacity
-   against a `--surface-active` fill, which keeps it at ~3.0:1 — legally disabled controls are exempt,
+   against a `--surface-active` fill, which keeps it at ~3.0:1 - legally disabled controls are exempt,
    but an unreadable disabled label is a support ticket. Never render information only as disabled.
 
 Control boundaries that are focusable (inputs, the hotkey capture field, select triggers) use
@@ -303,7 +303,7 @@ it must reveal a ≥3:1 boundary on hover and focus.
   --color-ink-400: #94A3AE;   --color-ink-950:  #10151A;
   --color-ink-500: #64727E;   --color-ink-1000: #0A0E12;
 
-  /* semantic aliases — components use ONLY these */
+  /* semantic aliases - components use ONLY these */
   --color-surface:        var(--surface);
   --color-surface-raised: var(--surface-raised);
   --color-surface-sunken: var(--surface-sunken);
@@ -352,7 +352,7 @@ it must reveal a ≥3:1 boundary on hover and focus.
 }
 ```
 
-**Tailwind v3** (`tailwind.config.ts`) — same values, for reference:
+**Tailwind v3** (`tailwind.config.ts`) - same values, for reference:
 
 ```ts
 import type { Config } from "tailwindcss";
@@ -402,7 +402,7 @@ export default {
 
 ### 3.1 Font stacks
 
-One stack, ordered so each OS hits its native UI face first. **Do not ship a webfont** — a 200KB
+One stack, ordered so each OS hits its native UI face first. **Do not ship a webfont** - a 200KB
 variable font download on a "no internet at runtime" product is both a contradiction and a first-paint
 cost.
 
@@ -420,13 +420,13 @@ font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Co
 ```
 
 Mono is used for exactly two things: keyboard chips (`<Kbd>`) and file sizes/durations in tabular
-positions. Transcript text is **sans** — it is prose, not code, and mono would make it look like
+positions. Transcript text is **sans** - it is prose, not code, and mono would make it look like
 output rather than like the user's own words.
 
 ### 3.2 Type scale
 
 Base UI size is **13px**, body/transcript is **14px**. Desktop utilities read denser than web apps;
-13px UI at 1× matches Segoe UI's native 12–13 and SF's 13.
+13px UI at 1× matches Segoe UI's native 12-13 and SF's 13.
 
 | Token | Size / LH | Weight | Use |
 |---|---|---|---|
@@ -439,9 +439,9 @@ Base UI size is **13px**, body/transcript is **14px**. Desktop utilities read de
 | `xl`  | 20 / 28, −0.01em | 600 | screen titles ("History", "Settings") |
 | `2xl` | 24 / 32, −0.015em | 600 | onboarding headlines only |
 
-**Weights: 400, 500, 600 only.** No 700 — bold in a small utility reads as shouting, and Segoe UI
-Variable's 700 is noticeably heavier than SF's, which breaks cross-platform parity. No 300 — it fails
-contrast at 11–13px on Windows' greyscale AA.
+**Weights: 400, 500, 600 only.** No 700 - bold in a small utility reads as shouting, and Segoe UI
+Variable's 700 is noticeably heavier than SF's, which breaks cross-platform parity. No 300 - it fails
+contrast at 11-13px on Windows' greyscale AA.
 
 Transcript text gets `max-width: 68ch` and `text-wrap: pretty` where supported.
 
@@ -459,10 +459,10 @@ Anchor measurements that everything else hangs off:
 |---|---|
 | Window edge gutter (main, settings) | 24 |
 | Section vertical rhythm (settings) | 32 between groups, 16 between rows |
-| Control height — default | 32 |
-| Control height — small | 26 |
-| Control height — large (onboarding CTAs, hotkey field) | 40 |
-| List row height — collapsed transcript | 64 |
+| Control height - default | 32 |
+| Control height - small | 26 |
+| Control height - large (onboarding CTAs, hotkey field) | 40 |
+| List row height - collapsed transcript | 64 |
 | Top bar height | 56 |
 | Icon sizes | 14 (inline), 16 (default), 18 (primary action), 20 (brand mark), 24 (empty state) |
 | Minimum hit target | 28×28 (desktop pointer; 32×32 preferred) |
@@ -475,7 +475,7 @@ Anchor measurements that everything else hangs off:
 
 ```css
 :root {
-  --dur-instant: 80ms;   /* hover, focus ring, press — must feel un-animated */
+  --dur-instant: 80ms;   /* hover, focus ring, press - must feel un-animated */
   --dur-fast:   140ms;   /* exits, icon swaps, toast in/out */
   --dur-base:   200ms;   /* size and position changes, overlay width */
   --dur-slow:   320ms;   /* route change, onboarding step advance */
@@ -491,7 +491,7 @@ Anchor measurements that everything else hangs off:
 The asymmetry is intentional and is the difference between "considered" and "generic": things arrive
 slower than they leave (200ms in, 140ms out). Exits that linger feel like the app is arguing.
 
-### 4.2 When motion is used — and when it is not
+### 4.2 When motion is used - and when it is not
 
 **Motion is used only to:**
 1. Explain a spatial or causal relationship (the overlay arrived from the screen edge; this panel came
@@ -506,11 +506,11 @@ slower than they leave (200ms in, 140ms out). Exits that linger feel like the ap
 - Draw attention to something the user already asked for (opening Settings is a 320ms cross-fade +
   8px slide, not a bounce).
 - Celebrate. There is no success confetti, no spring, no overshoot anywhere in this product. The one
-  place with any character is the overlay's arrival, and it is a 0.96→1 scale — not a bounce.
+  place with any character is the overlay's arrival, and it is a 0.96→1 scale - not a bounce.
 
 **Hard performance rule:** only `opacity` and `transform` are animated, plus the single sanctioned
 exception of the overlay capsule's `width`. Elements that animate carry `will-change` *only while
-animating* (added on state entry, removed on `transitionend`) — a permanent `will-change: transform` on
+animating* (added on state entry, removed on `transitionend`) - a permanent `will-change: transform` on
 15 waveform bars pins 15 compositor layers for the lifetime of the process.
 
 ### 4.3 Reduced motion
@@ -537,10 +537,10 @@ in amplitude as it goes.
 
 Two reasons this specific form, and not the alternatives:
 
-1. **It is the icon, animated.** The mark is a face on the left and three arcs radiating right — sound
+1. **It is the icon, animated.** The mark is a face on the left and three arcs radiating right - sound
    leaving a source and spreading. The centre-out waveform is that same idea rendered symmetrically.
    A left-to-right scrolling waveform (the default choice, used by nearly every competitor) reads as a
-   *recording timeline* — a thing with a length, a thing being captured and stored. kiku stores no
+   *recording timeline* - a thing with a length, a thing being captured and stored. kiku stores no
    audio. Radiating reads as *transmission*, which is what is actually happening.
 2. **It is readable at a glance with no fixation point.** A scrolling waveform has a "now" edge you
    must find. A symmetric one has its now-point at the geometric centre of the capsule, which is where
@@ -555,7 +555,7 @@ different contents. There is no second shape, no expanding panel, no corner toas
 This is a deliberate deviation from the "follow the OS theme" constraint, and I want it argued
 explicitly rather than discovered in review.
 
-The overlay does not sit on kiku's surface; it sits on **an arbitrary application's** surface — a dark
+The overlay does not sit on kiku's surface; it sits on **an arbitrary application's** surface - a dark
 IDE, a white document, a photograph, a video call. "Following the OS theme" is a guarantee about
 matching *our* windows, and the overlay has no windows to match. What it must do is be legible against
 anything, and a near-black capsule with a light-cyan waveform and a hairline highlight is legible on
@@ -577,7 +577,7 @@ The 94% opaque fill is the design, not a compromise.
 ### 5.3 Window geometry
 
 ```
-OS window ("kiku-overlay"):  320 × 96 logical px — FIXED, never resized
+OS window ("kiku-overlay"):  320 × 96 logical px - FIXED, never resized
   transparent: true          decorations: false        shadow: false (we draw our own)
   always_on_top: true        skip_taskbar: true        focusable: false
   resizable: false           visible_on_all_workspaces: true
@@ -587,7 +587,7 @@ OS window ("kiku-overlay"):  320 × 96 logical px — FIXED, never resized
 
 The window is oversized relative to the capsule on purpose: the capsule's widest state is 260px and
 its shadow bleeds ~28px, so 320×96 contains every state plus shadow plus the 8px entry translate. **The
-OS window never changes size** — resizing a window per state causes visible flicker on X11 and a
+OS window never changes size** - resizing a window per state causes visible flicker on X11 and a
 compositor round-trip on every state change. Only the CSS capsule inside it animates.
 
 `html, body` are `background: transparent; overflow: hidden; user-select: none;` and the capsule is
@@ -601,7 +601,7 @@ x = workArea.x + (workArea.width  - 320) / 2          // horizontally centred
 y = workArea.y +  workArea.height - 96 - 40           // 40px above the work area bottom
 ```
 
-- Anchored to the **work area**, not the display bounds — this is what keeps the capsule off the macOS
+- Anchored to the **work area**, not the display bounds - this is what keeps the capsule off the macOS
   Dock and the Windows taskbar. Getting this wrong is the most common shipped bug in this product
   category.
 - On the display containing the **currently focused window**, resolved at key-down; falls back to the
@@ -622,7 +622,7 @@ Height is **44px in every state**. Radius is always `22px` (a true capsule). Onl
 
 | State | Width | Contents | Duration |
 |---|---|---|---|
-| `hidden` | — | OS window hidden | — |
+| `hidden` | - | OS window hidden | - |
 | `listening` | **168** | waveform, 15 bars | while hotkey held |
 | `processing` | **132** | 3 pulsing dots | until transcript, min 180ms |
 | `done` | **108** | `Check` 18px, `--ov-success` | hold 420ms, then exit |
@@ -650,12 +650,12 @@ Notes on the edges:
   visually distinct from done (circle + X, no green) so the user learns the difference without being
   told.
 - **`Esc` during `listening` or `processing` cancels.** The overlay is click-through, so the keyboard
-  is the only cancel channel — this is non-optional.
+  is the only cancel channel - this is non-optional.
 - **Repeated `error` (3 in a row) raises the main window** to the relevant settings section. A
   click-through overlay cannot host troubleshooting; after three failures the user needs a surface they
   can actually interact with.
 
-### 5.6 Waveform — implementation spec
+### 5.6 Waveform - implementation spec
 
 **Geometry**
 
@@ -677,7 +677,7 @@ Index `i ∈ [0..14]`, centre index `c = 7`, ring distance `d = |i − c| ∈ [0
 
 1. Audio thread computes per-block RMS at ~**30Hz** (one value per ~33ms of audio). Do not emit at
    60Hz; the visual gains nothing and you double the IPC traffic during ASR.
-2. Convert to perceptual level. Linear RMS is useless — speech lives in a narrow band near the top of
+2. Convert to perceptual level. Linear RMS is useless - speech lives in a narrow band near the top of
    it and the bars would barely move.
    ```
    db    = 20 * log10(rms + 1e-7)
@@ -686,7 +686,7 @@ Index `i ∈ [0..14]`, centre index `c = 7`, ring distance `d = |i − c| ∈ [0
    `-58` is the noise floor; `-8` is a loud speaking voice close to a laptop mic. These two numbers are
    the entire "feel" of the waveform and should be the only tunables. Emit `level` as an `f32` over
    `emit_to("kiku-overlay", "audio-level", level)`.
-3. **Smoothing (JS, per animation frame).** Fast attack, slow release — the standard VU ballistic, and
+3. **Smoothing (JS, per animation frame).** Fast attack, slow release - the standard VU ballistic, and
    the reason a good meter looks alive instead of twitchy.
    ```ts
    const k = target > current ? 0.55 : 0.14;   // ~3 frames to rise, ~9 to fall @60fps
@@ -694,7 +694,7 @@ Index `i ∈ [0..14]`, centre index `c = 7`, ring distance `d = |i − c| ∈ [0
    ```
 4. **Ring buffer.** Keep `history: Float32Array(8)` (centre + 7 rings). Push the current smoothed
    level into `history[0]` every **70ms**, shifting the rest outward. Visible window =
-   8 × 70ms ≈ **560ms** of recent speech — long enough to read as a shape, short enough to feel
+   8 × 70ms ≈ **560ms** of recent speech - long enough to read as a shape, short enough to feel
    immediate.
 5. **Per-bar height.**
    ```ts
@@ -718,14 +718,14 @@ Index `i ∈ [0..14]`, centre index `c = 7`, ring distance `d = |i − c| ∈ [0
 - Add `will-change: transform` on the bar container's children when entering `listening`, remove it on
   entering `processing`. Never leave it on.
 - **Frame budget: ≤ 0.6ms of JS per frame, ≤ 1.5ms total frame cost.** If a profiler shows more, the
-  bug is a React re-render — the rAF loop must write to the DOM imperatively and must not call
+  bug is a React re-render - the rAF loop must write to the DOM imperatively and must not call
   `setState`. State-machine transitions use React; the 60fps loop does not.
 
 **Idle behaviour (listening, but silence)**
 
-All bars settle to `scaleY: 0.20` (a 130×4px dotted-dash line). Do **not** leave it dead — dead reads
+All bars settle to `scaleY: 0.20` (a 130×4px dotted-dash line). Do **not** leave it dead - dead reads
 as crashed. Instead: one animation, on the bar *container*, `opacity: 0.55 ⇄ 0.85` over **2400ms**,
-`ease-inout`, infinite. One property, one element, one composited animation — the cost is a rounding
+`ease-inout`, infinite. One property, one element, one composited animation - the cost is a rounding
 error, and the capsule breathes.
 
 The breathing animation is paused whenever `max(history) > 0.08` and resumed after 900ms of continued
@@ -736,8 +736,8 @@ silence, so it never fights with real audio.
 The waveform is information (am I being heard?), so it does not simply stop. Under
 `prefers-reduced-motion: reduce`:
 - Update at **10Hz** instead of 60Hz (a `setInterval`, not rAF).
-- Replace the 15-bar mirrored display with **a single centred bar** whose *width* maps to level —
-  60px at silence, 130px at full — because a horizontally growing meter has far less apparent motion
+- Replace the 15-bar mirrored display with **a single centred bar** whose *width* maps to level -
+  60px at silence, 130px at full - because a horizontally growing meter has far less apparent motion
   than 15 independently scaling elements.
 - Remove the idle breathing pulse; use a static `--ov-bar-idle` fill instead.
 
@@ -753,7 +753,7 @@ hidden → listening
 listening → processing
   1. bars collapse:  all scaleY → 0.20   |  140ms  --ease-inout
   2. cross-fade:     bars opacity 1→0 (100ms) / dots opacity 0→1 (100ms, +60ms delay)
-  3. capsule width:  168 → 132           |  200ms  --ease-inout   (runs concurrently with 1–2)
+  3. capsule width:  168 → 132           |  200ms  --ease-inout   (runs concurrently with 1-2)
 
 processing (loop)
   3 dots · 4px · 5px gap · --ov-bar
@@ -775,7 +775,7 @@ any → exit
   capsule width → 260                    | 200ms --ease-inout
   left rail 3px --ov-danger fades in     | 140ms
   icon + text fade in                    | 140ms, +80ms delay
-  shake: translateX keyframes 0,-3,3,-2,2,0 over 260ms — EXACTLY ONCE, never looping,
+  shake: translateX keyframes 0,-3,3,-2,2,0 over 260ms - EXACTLY ONCE, never looping,
          suppressed entirely under reduced-motion
 
 listening/processing → cancelled
@@ -787,14 +787,14 @@ listening/processing → cancelled
 ### 5.9 Sound feedback
 
 Because the overlay is click-through and non-focusable, it cannot be announced to a screen reader and
-cannot be interacted with. **Sound is therefore the primary non-visual state channel, not a nicety —
+cannot be interacted with. **Sound is therefore the primary non-visual state channel, not a nicety -
 it ships default-ON**, and this should be stated in the settings copy.
 
 ```
 start   660 Hz sine, 55ms, 6ms attack / 20ms release
 end     880 Hz sine, 55ms
 error   descending 520→390 Hz, 140ms
-cancel  (silent — absence of the end tone is the signal)
+cancel  (silent - absence of the end tone is the signal)
 ```
 
 All four are generated in-process, not loaded as assets. Default volume 45%.
@@ -861,7 +861,7 @@ type ToggleProps = {
 type SliderProps = {
   value: number; min?: number; max?: number; step?: number;
   onChange: (v: number) => void;
-  onCommit?: (v: number) => void;        // fires on pointer-up — plays the test sound once
+  onCommit?: (v: number) => void;        // fires on pointer-up - plays the test sound once
   leadingIcon?: LucideIcon; trailingIcon?: LucideIcon;
   formatValue?: (v: number) => string;   // "45%"
 };
@@ -904,7 +904,7 @@ type BadgeProps = {
 
 // ───────────────────────────────── 9. Kbd ────────────────────────────────────
 type KbdProps = {
-  keys: string[];                        // ["Ctrl","Shift","Space"] — normalised per OS
+  keys: string[];                        // ["Ctrl","Shift","Space"] - normalised per OS
   size?: "sm" | "md";
   tone?: "neutral" | "accent";
 };
@@ -965,7 +965,7 @@ type WaveBarsProps = {
   reducedMotion?: boolean;               // switches to single width-mapped bar
 };
 // The signature component. Reused at height={12} bars={9} in onboarding's mic test and
-// in the Settings > Microphone live-level preview — which is exactly why it is a primitive
+// in the Settings > Microphone live-level preview - which is exactly why it is a primitive
 // and not overlay-internal code.
 ```
 
@@ -1029,7 +1029,7 @@ local JSX).
    ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔ dock / taskbar ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
 ```
 
-### 7.2 Main window — History
+### 7.2 Main window - History
 
 Default **880 × 620**, min **640 × 460**. Resizable. Remembers size and position.
 
@@ -1088,7 +1088,7 @@ Default **880 × 620**, min **640 × 460**. Resizable. Remembers size and positi
   │                  └── Kbd, accent tone ──┘                                    │
   │                                                                              │
   │                     Your transcripts will appear here.       sm, muted       │
-  │                     Text only — audio is never stored.                       │
+  │                     Text only - audio is never stored.                       │
   └──────────────────────────────────────────────────────────────────────────────┘
 
   ── history paused ──────────────────────────────────────────────────────────
@@ -1097,16 +1097,16 @@ Default **880 × 620**, min **640 × 460**. Resizable. Remembers size and positi
 ```
 
 **Why this and not a grid of cards.** The dominant reuse action is "copy the thing I just dictated,
-again" — the target is almost always in the top three rows, found by recency, not by browsing. A card
+again" - the target is almost always in the top three rows, found by recency, not by browsing. A card
 grid optimises for browsing a corpus; kiku's history is a *recency stack*. So: dense rows, day groups,
-newest first, and the row itself is the copy target — **clicking anywhere on a row copies it** and the
+newest first, and the row itself is the copy target - **clicking anywhere on a row copies it** and the
 row flashes `surface-selected` for 400ms with the trailing icon swapping `Copy → Check`. Double-click
 or `Space` expands for reading and selecting sub-text. That turns the single most common action into a
 zero-aim click, which a card grid cannot.
 
 ### 7.3 Settings
 
-Same **880 × 620** window, same chrome, full-window route (not a modal — the hotkey capture field must
+Same **880 × 620** window, same chrome, full-window route (not a modal - the hotkey capture field must
 own the keyboard, and trapping keys inside a modal that also wants Escape is a fight you lose).
 
 ```
@@ -1178,15 +1178,15 @@ own the keyboard, and trapping keys inside a modal that also wants Escape is a f
 **IA decision: sticky left section-nav + one continuous scroll.** Justification, and the two rejected
 options:
 
-- **Rejected — tabs.** Eight groups is too many for a tab strip in an 880px window, and tabs impose a
+- **Rejected - tabs.** Eight groups is too many for a tab strip in an 880px window, and tabs impose a
   "which tab is X in?" lookup cost on a user who visits settings perhaps four times ever. Worse, tabs
   hide the macOS Accessibility warning behind a click, and that warning is the single thing most likely
   to be blocking a new user.
-- **Rejected — bare single scroll, no nav.** Honest and minimal, but the content is ~2.5 viewport
+- **Rejected - bare single scroll, no nav.** Honest and minimal, but the content is ~2.5 viewport
   heights and the two settings people actually return to (hotkey, microphone) are at the top while the
   one they need in an emergency (permissions) is at the bottom. Scrolling to find it is a tax.
-- **Chosen — nav + scroll.** You get tabs' direct access *and* scroll's full-overview scannability.
-  The nav is scroll-spy-linked, so it doubles as a map of the entire product's surface area — which,
+- **Chosen - nav + scroll.** You get tabs' direct access *and* scroll's full-overview scannability.
+  The nav is scroll-spy-linked, so it doubles as a map of the entire product's surface area - which,
   for a single-purpose tool, is itself a reassurance: *this is all there is.* It also degrades
   gracefully to a single column below 720px width, where the nav collapses into a row of chips.
 
@@ -1195,10 +1195,10 @@ Every group is a `<Panel>`, every line is a `<Row>`. Settings contributes **zero
 ### 7.4 Onboarding
 
 Dedicated window, **580 × 540**, not resizable, centred, no title bar text. Four steps. It is short
-enough that a step counter is the only progress affordance needed — no progress bar, no sidebar.
+enough that a step counter is the only progress affordance needed - no progress bar, no sidebar.
 
 ```
-STEP 1 — WELCOME
+STEP 1 - WELCOME
 ┌────────────────────────────────────────────────────────────┐ 580
 │                                                            │
 │                         ◉  64px                            │ 80 top pad
@@ -1207,7 +1207,7 @@ STEP 1 — WELCOME
 │                                                            │
 │      Hold a key, say what you mean, and kiku types it      │ base/secondary
 │      wherever your cursor is. Everything runs on this      │ max 44ch, centred
-│      computer — nothing is sent anywhere.                  │
+│      computer - nothing is sent anywhere.                  │
 │                                                            │
 │      ┌────────────────────────────────────────────────┐    │
 │      │ 🔒  No account. No cloud. No telemetry.        │    │ Panel tone="accent"
@@ -1218,7 +1218,7 @@ STEP 1 — WELCOME
 │  1 of 4                                     [ Get started ]│ 64 footer, lg button
 └────────────────────────────────────────────────────────────┘
 
-STEP 2 — CHOOSE A MODEL
+STEP 2 - CHOOSE A MODEL
 ┌────────────────────────────────────────────────────────────┐
 │  Pick a speech model                            xl/600     │ 32 pad
 │  You can change this later in Settings.      base/muted    │
@@ -1239,7 +1239,7 @@ STEP 2 — CHOOSE A MODEL
 │  2 of 4                              [ Back ]  [ Continue ]│
 └────────────────────────────────────────────────────────────┘
 
-STEP 3 — SETTING UP  (download and permissions run CONCURRENTLY)
+STEP 3 - SETTING UP  (download and permissions run CONCURRENTLY)
 ┌────────────────────────────────────────────────────────────┐
 │  Setting up                                     xl/600     │
 │                                                            │
@@ -1264,7 +1264,7 @@ STEP 3 — SETTING UP  (download and permissions run CONCURRENTLY)
 │  3 of 4                                        [ Continue ]│  disabled until
 └────────────────────────────────────────────────────────────┘  download done + mic granted
 
-STEP 4 — TRY IT
+STEP 4 - TRY IT
 ┌────────────────────────────────────────────────────────────┐
 │  Try it now                                     xl/600     │
 │                                                            │
@@ -1275,7 +1275,7 @@ STEP 4 — TRY IT
 │  ┌──────────────────────────────────────────────────────┐  │
 │  │                                                      │  │ 132  live practice field
 │  │   ▁ ▃ ▅ ▇ █ ▇ ▅ ▃ ▁      ← WaveBars, h=20, n=15     │  │      real focus, real paste
-│  │                                                      │  │      target — the hotkey
+│  │                                                      │  │      target - the hotkey
 │  │   your words appear here▏                            │  │      actually works here
 │  └──────────────────────────────────────────────────────┘  │
 │                                                            │
@@ -1291,7 +1291,7 @@ Two things worth defending in step 3: the download starts the instant the model 
 3 transition), and permission prompts run *during* it. The 648MB download is the long pole of
 onboarding; making the user grant permissions first and *then* wait is a self-inflicted 2-minute dead
 screen. Second: the "Continue" gate requires mic + download but **not** macOS Accessibility, because
-that grant requires leaving the app and some users will come back later — blocking on it strands them
+that grant requires leaving the app and some users will come back later - blocking on it strands them
 in the wizard. The main window shows a persistent warning banner until it is granted.
 
 ---
@@ -1303,28 +1303,28 @@ these stroke colours is the sweet spot), `stroke-linecap: round`.
 
 | Where | Action / meaning | Icon | Notes |
 |---|---|---|---|
-| **Overlay** | listening | *(none — waveform)* | zero icons in the signature state |
-| | processing | *(none — 3 dots)* | not `Loader2`; a spinner reads "web page" |
+| **Overlay** | listening | *(none - waveform)* | zero icons in the signature state |
+| | processing | *(none - 3 dots)* | not `Loader2`; a spinner reads "web page" |
 | | done | `Check` | 18px, `--ov-success` |
 | | cancelled | `X` | 14px, 60% opacity |
 | | error | `TriangleAlert` | v0.400+ name; `AlertTriangle` on older |
-| **Main — top bar** | search | `Search` | leading, inside Input |
+| **Main - top bar** | search | `Search` | leading, inside Input |
 | | clear search | `X` | trailing, `clearable` |
 | | pause history | `Pause` | → `Play` when paused, accent tint |
-| | open settings | `Settings2` | sliders form — more instrument than gear |
-| **Main — rows** | copy | `Copy` | → `Check` for 1200ms on success |
+| | open settings | `Settings2` | sliders form - more instrument than gear |
+| **Main - rows** | copy | `Copy` | → `Check` for 1200ms on success |
 | | delete one | `Trash2` | |
 | | edit transcript | `Pencil` | see §11.2 |
 | | expand / collapse | `ChevronRight` / `ChevronDown` | only on hover; rows expand on click too |
 | | row selected | `SquareCheckBig` / `Square` | in `Row leading` |
-| **Main — bulk** | select all | `ListChecks` | |
+| **Main - bulk** | select all | `ListChecks` | |
 | | copy selected | `Copy` | |
 | | delete selected | `Trash2` | danger variant |
-| | empty state | *(brand mark)* | not a Lucide icon — the product's own face |
+| | empty state | *(brand mark)* | not a Lucide icon - the product's own face |
 | | no search results | `SearchX` | compact EmptyState |
 | **Settings nav** | dictation | `Keyboard` | |
 | | microphone | `Mic` | `MicOff` when no device |
-| | model | `Cpu` | not `Brain` — this is a technical product |
+| | model | `Cpu` | not `Brain` - this is a technical product |
 | | sound | `Volume2` | `VolumeX` when muted |
 | | history | `History` | |
 | | permissions | `ShieldCheck` / `ShieldAlert` | state-dependent in the nav itself |
@@ -1338,7 +1338,7 @@ these stroke colours is the sweet spot), `stroke-linecap: round`.
 | | select chevron | `ChevronDown` | |
 | | slider ends | `Volume1` / `Volume2` | |
 | | back to history | `ArrowLeft` | |
-| **Onboarding** | privacy callout | `Lock` | not `ShieldCheck` — lock = data, shield = permission |
+| **Onboarding** | privacy callout | `Lock` | not `ShieldCheck` - lock = data, shield = permission |
 | | step complete | `Check` | success tone |
 | | downloading | `Download` | |
 | | skip | *(text only)* | |
@@ -1355,7 +1355,7 @@ delete, search, close) and then always with an `aria-label` and a native `title`
 
 ### 9.1 Focus
 
-- `:focus-visible` only — never `:focus`. A mouse user clicking a row must not get a ring.
+- `:focus-visible` only - never `:focus`. A mouse user clicking a row must not get a ring.
 - The ring is a **double box-shadow**, so it reads on every background including accent fills:
   ```css
   outline: none;
@@ -1376,7 +1376,7 @@ delete, search, close) and then always with an `aria-label` and a native `title`
 | Key | Action |
 |---|---|
 | `/` or `Ctrl/⌘ F` | focus search |
-| `↑ ↓` | move row focus (roving tabindex — the list is one tab stop) |
+| `↑ ↓` | move row focus (roving tabindex - the list is one tab stop) |
 | `Enter` | copy focused transcript |
 | `Space` | expand / collapse focused transcript |
 | `Ctrl/⌘ C` | copy focused (or all selected) |
@@ -1394,12 +1394,12 @@ delete, search, close) and then always with an `aria-label` and a native `title`
 - The hotkey capture field is a `<button role="button" aria-describedby>` that, on activation, enters
   capture mode: it takes a document-level `keydown` capture listener, calls `preventDefault()` on
   everything, announces "Press a key combination" via `aria-live="assertive"`, and commits on the
-  `keyup` of the first non-modifier. `Escape` exits capture without committing — which means Escape
+  `keyup` of the first non-modifier. `Escape` exits capture without committing - which means Escape
   cannot be bound as a hotkey, and that is the right trade.
 - Sliders are real `<input type="range">` with `aria-valuetext="45 percent"`; `←/→` = 5%, `Home/End` =
   min/max.
 
-**Overlay** — has no keyboard focus by construction (non-activating). The only key it responds to is
+**Overlay** - has no keyboard focus by construction (non-activating). The only key it responds to is
 the global `Escape` handler that cancels dictation, registered as a temporary global shortcut for the
 duration of `listening`/`processing` and unregistered immediately after.
 
@@ -1430,7 +1430,7 @@ reduced rate; motion that carries only polish stops entirely.** The waveform is 
 
 - Respect `prefers-contrast: more`: promote `--border` → `--border-strong`, raise `--text-muted` to
   `--text-secondary`, thicken the focus ring to 3px, and raise the overlay fill to 100% opacity.
-- Support OS text scaling up to 150% — all heights in §3.3 are minimums (`min-height`), never fixed
+- Support OS text scaling up to 150% - all heights in §3.3 are minimums (`min-height`), never fixed
   `height`, except the overlay capsule, which is fixed by design because it must not grow into the
   user's content.
 - No colour-only encoding anywhere. `done` is a checkmark *and* green; `error` is a triangle, a rail,
@@ -1446,10 +1446,10 @@ do. Examples that should be lifted verbatim:
 
 | Situation | Copy |
 |---|---|
-| Overlay error — mic busy | `Microphone is in use by another app` |
-| Overlay error — no permission | `kiku needs microphone access` |
-| Overlay error — too quiet | `Didn't catch that` |
-| Overlay error — paste blocked (macOS) | `Grant Accessibility to type for you` |
+| Overlay error - mic busy | `Microphone is in use by another app` |
+| Overlay error - no permission | `kiku needs microphone access` |
+| Overlay error - too quiet | `Didn't catch that` |
+| Overlay error - paste blocked (macOS) | `Grant Accessibility to type for you` |
 | Hotkey conflict | `Already used by macOS for Input Sources.` + two suggestion chips |
 | Delete confirm | `Delete 3 transcripts? This can't be undone.` |
 | History toggle | `Text only. Audio is discarded the moment it's transcribed.` |
@@ -1468,7 +1468,7 @@ Ship one dark capsule.
 This is my one argued-for addition, and I want to be clear it is error recovery, not a feature.
 
 Speech recognition gets names, jargon, and numbers wrong. With no stored audio, a wrong transcript is
-**unrecoverable** — the user cannot re-listen, cannot re-run it on the better model, cannot verify. The
+**unrecoverable** - the user cannot re-listen, cannot re-run it on the better model, cannot verify. The
 history list then becomes a graveyard of subtly-wrong text that the user must either retype or
 re-dictate. That is the product's core failure mode and there is currently no UI for it.
 
@@ -1480,7 +1480,7 @@ history exists. **I would not ship 1.0 without it.**
 ### 11.3 Two models named by size is asking the user a question they can't answer
 "650MB vs 200MB" is a storage question. The user's actual question is "will it get my colleague's name
 right, and how long will I wait?" Ship the labels **Accurate** and **Fast**, with size as secondary
-metadata, and — after the first ten dictations — replace the estimated latency with the *measured*
+metadata, and - after the first ten dictations - replace the estimated latency with the *measured*
 median on that machine ("~0.9 s on your machine"). Measured numbers are the most credible thing a
 local-first app can show, and they cost one rolling average.
 
@@ -1497,7 +1497,7 @@ A held three-key chord for the product's only interaction is a repetitive-strain
 should be a **single right-side modifier held down**: `Right Ctrl` on Windows/Linux, `Right ⌘` on
 macOS. Caveats to handle: on many European layouts `Right Alt` is AltGr and must never be offered; on
 macOS, capturing a bare modifier requires an event tap, which is the same Accessibility permission we
-already request, so it is free. I am **not** recommending a toggle-to-talk mode — that is the feature
+already request, so it is free. I am **not** recommending a toggle-to-talk mode - that is the feature
 creep the owner rightly rejected, and hold-to-talk with a good cancel (§5.5) covers the long-dictation
 case adequately.
 

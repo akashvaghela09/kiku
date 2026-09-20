@@ -1,6 +1,6 @@
 //! Reading and writing the dictation history.
 //!
-//! Text only — no audio is ever stored. That is a scope decision with a privacy
+//! Text only - no audio is ever stored. That is a scope decision with a privacy
 //! consequence worth stating: everything a user dictates ends up here in plain text,
 //! including things they did not mean to keep. The store therefore treats deletion and
 //! pausing as first-class operations rather than afterthoughts.
@@ -28,7 +28,7 @@ pub struct Entry {
     /// is eleven thousand years.
     pub id: u32,
     pub text: String,
-    /// RFC 3339 in UTC — self-describing, exact, and parsed natively by `Date`.
+    /// RFC 3339 in UTC - self-describing, exact, and parsed natively by `Date`.
     pub created_at: String,
     pub audio_ms: u32,
     pub decode_ms: u32,
@@ -242,7 +242,7 @@ fn now_millis() -> i64 {
 
 /// Turn what someone typed into a search box into a safe FTS5 query.
 ///
-/// FTS5's syntax has operators — `AND`, `NEAR`, `*`, `"` — and a raw string containing
+/// FTS5's syntax has operators - `AND`, `NEAR`, `*`, `"` - and a raw string containing
 /// them is either a syntax error or a query the user did not ask for. Each word is
 /// quoted as a literal and a prefix wildcard is added to the last one, so results
 /// narrow as the user is still typing.

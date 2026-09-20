@@ -27,7 +27,7 @@ const STOP_WAV: &[u8] = include_bytes!(concat!(
 /// chime is one more noise in a tool used dozens of times a day.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Cue {
-    /// Kiku has started listening — on either the hold or the toggle shortcut.
+    /// Kiku has started listening - on either the hold or the toggle shortcut.
     Start,
     /// Kiku has stopped listening.
     Stop,
@@ -65,7 +65,7 @@ fn cached(slot: &'static OnceLock<Vec<f32>>, bytes: &'static [u8], name: &str) -
 /// Decode an embedded 16-bit mono WAV.
 ///
 /// A malformed asset is a build mistake, not a runtime condition, so this degrades to
-/// silence and logs rather than panicking — a broken cue must never take the
+/// silence and logs rather than panicking - a broken cue must never take the
 /// application down mid-dictation.
 fn decode(bytes: &'static [u8], name: &str) -> Vec<f32> {
     let reader = match hound::WavReader::new(Cursor::new(bytes)) {

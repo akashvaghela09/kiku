@@ -5,7 +5,7 @@ import { defineConfig } from 'vite';
 
 // Two entry documents rather than one router. The overlay is a separate OS window
 // that must paint within a frame or two of the hotkey, so it loads only the waveform
-// code — none of the history, settings or onboarding bundle.
+// code - none of the history, settings or onboarding bundle.
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   clearScreen: false,

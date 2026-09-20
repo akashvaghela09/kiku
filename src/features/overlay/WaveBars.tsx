@@ -14,7 +14,7 @@ import {
  * The waveform: fifteen bars, mirrored outward from the centre.
  *
  * The newest sample lands in the middle bar and propagates outward, so sound appears
- * to radiate from a source — the app's own mark in motion. A left-to-right scroll
+ * to radiate from a source - the app's own mark in motion. A left-to-right scroll
  * would read as a recording timeline, and Kiku stores no audio, so that would be a
  * promise the product does not keep.
  *
@@ -84,7 +84,7 @@ export function WaveBars({ levelRef, height = BAR_HEIGHT }: WaveBarsProps) {
     };
 
     if (reduced) {
-      // The waveform is information — "am I being heard?" — so it does not stop when
+      // The waveform is information - "am I being heard?" - so it does not stop when
       // motion is reduced. It slows to 10Hz and drops the per-bar animation.
       timer = window.setInterval(() => {
         current = levelRef.current ?? 0;

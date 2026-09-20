@@ -3,8 +3,8 @@ import { cn } from '@/lib/cn';
 /**
  * The most reused primitive in the application.
  *
- * A settings row and a transcript row are the same shape — something leading, a title
- * with optional description, something trailing — so they are the same component.
+ * A settings row and a transcript row are the same shape - something leading, a title
+ * with optional description, something trailing - so they are the same component.
  * Settings contributes no components of its own precisely because of this.
  */
 export interface RowProps {

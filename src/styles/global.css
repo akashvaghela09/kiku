@@ -144,7 +144,7 @@
 }
 
 @layer components {
-  /* Loading dots inside a Button — keeps the button's width steady while working. */
+  /* Loading dots inside a Button - keeps the button's width steady while working. */
   .loading-dot {
     animation: dot-bounce 900ms var(--ease-in-out) infinite;
   }
@@ -189,7 +189,7 @@
   }
 
   /* Range input: the track is painted by an inline gradient, so only the thumb
-     needs styling — and it needs styling twice, once per engine. */
+     needs styling - and it needs styling twice, once per engine. */
   .kiku-slider::-webkit-slider-thumb {
     appearance: none;
     width: 14px;

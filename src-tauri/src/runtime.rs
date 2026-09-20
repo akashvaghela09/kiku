@@ -85,7 +85,7 @@ fn install_watcher(app: &AppHandle, bindings: &HotkeyBindings) {
 ///
 /// The overlay is click-through by design, so it can never receive a click and the
 /// keyboard is the only channel through which a recording can be abandoned. Escape is
-/// grabbed for the duration of the session and released immediately afterwards —
+/// grabbed for the duration of the session and released immediately afterwards -
 /// holding it globally would break Escape everywhere else on the system.
 fn escape_shortcut() -> Option<Shortcut> {
     Shortcut::from_str("Escape").ok()
@@ -139,7 +139,7 @@ fn cancel(app: &AppHandle) {
 /// Replace the registered hotkeys.
 ///
 /// Unregisters everything first, then installs the new pair. If the new pair cannot be
-/// registered — because something else already owns it — the previous pair is put
+/// registered - because something else already owns it - the previous pair is put
 /// back, so a failed rebinding never leaves the user without a working shortcut.
 pub fn rebind(app: &AppHandle, next: HotkeyBindings) -> crate::Result<()> {
     let previous = app.state::<AppState>().hotkeys.current();
@@ -246,7 +246,7 @@ fn stop(app: &AppHandle) {
 /// Put the transcript where the user is typing, then tell the UI what happened.
 ///
 /// The clipboard copy is unconditional, so even a refused paste leaves the text
-/// somewhere reachable — which is why a delivery failure is reported rather than
+/// somewhere reachable - which is why a delivery failure is reported rather than
 /// treated as a lost dictation.
 fn deliver(app: &AppHandle, transcript: crate::asr::Transcript) {
     let state = app.state::<AppState>();

@@ -77,7 +77,7 @@ fn the_reference_clip_transcribes_through_the_service() {
     );
 
     // Chunk 0 measured RTF around 0.05. Anything approaching real time means the
-    // configuration has regressed — most likely threads or the decoding method.
+    // configuration has regressed - most likely threads or the decoding method.
     assert!(
         transcript.real_time_factor() < 0.5,
         "decoding got drastically slower: RTF {:.3}",

@@ -60,13 +60,13 @@ pub struct AppState {
     pub asr: AsrService,
     pub dictation: Dictation,
     pub hotkeys: HotkeyState,
-    /// Application data directory — models, database and settings all live under it.
+    /// Application data directory - models, database and settings all live under it.
     pub data_dir: PathBuf,
     /// Device id of the chosen microphone; `None` means follow the system default.
     microphone: Mutex<Option<String>>,
     preferences: Mutex<Preferences>,
     /// `None` when the database could not be opened. Dictation still works without
-    /// history — refusing to launch over a history problem would be the worse failure.
+    /// history - refusing to launch over a history problem would be the worse failure.
     history: Option<History>,
 }
 
@@ -126,7 +126,7 @@ impl AppState {
 ///
 /// Also owns the key watcher, because a bare modifier cannot be registered with the
 /// operating system and has to be polled instead. Keeping the watcher here is what
-/// keeps it alive — dropping it stops the poll thread.
+/// keeps it alive - dropping it stops the poll thread.
 #[derive(Default)]
 pub struct HotkeyState {
     bindings: Mutex<Option<HotkeyBindings>>,

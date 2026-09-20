@@ -1,4 +1,4 @@
-//! Kiku — offline dictation.
+//! Kiku - offline dictation.
 //!
 //! Modules are organised by domain rather than by layer, so a change to "how audio is
 //! captured" touches one directory instead of being spread across `services/`,

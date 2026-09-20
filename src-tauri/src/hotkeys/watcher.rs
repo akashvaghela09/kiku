@@ -4,14 +4,14 @@
 //! hotkey API takes modifiers plus one *ordinary* key, and the Tauri plugin will not
 //! even parse `ControlRight`. Such a key has to be observed instead.
 //!
-//! **Key state is polled, not hooked.** Reading whether a key is currently down —
+//! **Key state is polled, not hooked.** Reading whether a key is currently down -
 //! `XQueryKeymap` on X11, `GetAsyncKeyState` on Windows, `CGEventSourceKeyState` on
-//! macOS — is deliberately chosen over a low-level keyboard hook:
+//! macOS - is deliberately chosen over a low-level keyboard hook:
 //!
 //! * A hook intercepts every keystroke in the system. Polling reads state and consumes
 //!   nothing, so Right Ctrl keeps working as Ctrl everywhere else.
 //! * On Windows a hook means `WH_KEYBOARD_LL`, the pattern antivirus flags on unsigned
-//!   binaries — and Kiku ships unsigned.
+//!   binaries - and Kiku ships unsigned.
 //! * On macOS a hook needs Input Monitoring, a second permission on top of the
 //!   Accessibility grant pasting already requires. Polling reuses Accessibility.
 //!
@@ -89,7 +89,7 @@ impl SingleKey {
 /// Keys whose presence means "the user is doing something else".
 ///
 /// Deliberately not every key: the watched key's own left-hand twin is excluded,
-/// because on X11 pressing the right-hand key reports the left one as well — an
+/// because on X11 pressing the right-hand key reports the left one as well - an
 /// artefact of how the modifier state is read, not a second key being pressed.
 fn is_other_key(pressed: Keycode, watched: SingleKey) -> bool {
     if pressed == watched.keycode() {

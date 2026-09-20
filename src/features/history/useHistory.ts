@@ -29,7 +29,7 @@ export function useHistory(query: string) {
     error: null,
   });
 
-  // Guards against an older, slower request overwriting a newer one — which is what
+  // Guards against an older, slower request overwriting a newer one - which is what
   // makes a search box show results for a query the user has already changed.
   const requestId = useRef(0);
 

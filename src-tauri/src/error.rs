@@ -73,8 +73,8 @@ impl<E: Into<Error>> From<E> for ErrorPayload {
     }
 }
 
-/// Return type for domain code — carries the rich variant.
+/// Return type for domain code - carries the rich variant.
 pub type Result<T> = std::result::Result<T, Error>;
 
-/// Return type for every `#[tauri::command]` — carries the wire shape.
+/// Return type for every `#[tauri::command]` - carries the wire shape.
 pub type CommandResult<T> = std::result::Result<T, ErrorPayload>;

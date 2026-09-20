@@ -1,6 +1,6 @@
 //! NVIDIA Parakeet through sherpa-onnx.
 //!
-//! The configuration here is not guesswork — each value was established by the chunk 0
+//! The configuration here is not guesswork - each value was established by the chunk 0
 //! gate and is wrong in a way that fails quietly if changed:
 //!
 //! * `model_type` must be `nemo_transducer`. The generic `transducer` path mishandles
@@ -24,7 +24,7 @@ const FEATURE_DIM: i32 = 128;
 
 /// Decode threads.
 ///
-/// Chunk 0 measured 6.1x real time on one thread, 15.9x on four and 18.4x on eight —
+/// Chunk 0 measured 6.1x real time on one thread, 15.9x on four and 18.4x on eight -
 /// so returns flatten after four. Capping there leaves cores free for the UI drawing
 /// the waveform, which is the thing a user would actually notice.
 const MAX_THREADS: usize = 4;

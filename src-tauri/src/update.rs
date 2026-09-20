@@ -2,7 +2,7 @@
 //!
 //! Kiku does not update itself. This asks GitHub once a day whether a newer release is
 //! published and shows a banner with a link; it never downloads, installs, or runs
-//! anything. The result of that fetch is remote data used for exactly one purpose —
+//! anything. The result of that fetch is remote data used for exactly one purpose -
 //! comparing a version string and displaying a URL.
 //!
 //! The check is the only network traffic Kiku makes after the model is installed, so
@@ -35,7 +35,7 @@ pub enum UpdateStatus {
     UpToDate,
     /// A newer release exists.
     Available { version: String, url: String },
-    /// Nothing known — offline, switched off, or not yet checked.
+    /// Nothing known - offline, switched off, or not yet checked.
     Unknown,
 }
 

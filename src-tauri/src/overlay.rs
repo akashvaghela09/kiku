@@ -4,7 +4,7 @@
 //!
 //! * **Anchor to the monitor's work area, not its bounds.** The work area excludes the
 //!   macOS Dock and the Windows taskbar. Using the full bounds is the most common
-//!   shipped bug in this category — the capsule ends up underneath the dock.
+//!   shipped bug in this category - the capsule ends up underneath the dock.
 //! * **Recompute on every show, never cache.** Monitors get plugged in, resolutions
 //!   change, and a cached position puts the overlay on a screen that is no longer
 //!   there.
@@ -24,7 +24,7 @@ use tauri::{AppHandle, LogicalPosition, LogicalSize, Manager, PhysicalPosition, 
 ///
 /// This is a *request*. WebKitGTK gives its webview a natural minimum height that a
 /// GTK window will not shrink below, so on Linux the real window can be taller than
-/// this. That is harmless — the extra area is transparent and click-through — but it
+/// this. That is harmless - the extra area is transparent and click-through - but it
 /// means the position must be computed from the window's actual size, which
 /// [`place`] does.
 pub const WINDOW_SIZE: LogicalSize<f64> = LogicalSize::new(320.0, 96.0);
@@ -33,7 +33,7 @@ pub const WINDOW_SIZE: LogicalSize<f64> = LogicalSize::new(320.0, 96.0);
 ///
 /// The capsule is anchored to the *bottom* of the overlay window by the same amount in
 /// CSS, and the window's bottom edge is placed on the work area's bottom edge. That
-/// makes the window's exact height irrelevant — which matters, because WebKitGTK
+/// makes the window's exact height irrelevant - which matters, because WebKitGTK
 /// forces it larger than requested and some window managers clamp it again.
 pub const BOTTOM_MARGIN: f64 = 40.0;
 
@@ -42,8 +42,8 @@ pub const LABEL: &str = "overlay";
 /// The overlay window's real size, once it has been measured.
 ///
 /// A hidden window has not been realised and reports 0×0, so the first placement has
-/// to assume [`WINDOW_SIZE`]. After the first show the actual size — which WebKitGTK
-/// may have forced larger — is recorded here and every later placement is exact.
+/// to assume [`WINDOW_SIZE`]. After the first show the actual size - which WebKitGTK
+/// may have forced larger - is recorded here and every later placement is exact.
 static MEASURED_SIZE: Mutex<Option<(f64, f64)>> = Mutex::new(None);
 
 pub fn window(app: &AppHandle) -> Option<WebviewWindow> {
@@ -110,7 +110,7 @@ fn remember_size(overlay: &WebviewWindow) -> bool {
 ///
 /// Applied on every show rather than once at startup, because on Linux the call
 /// reaches into the GDK window behind the GTK widget, and that does not exist until
-/// the window has been realised — which only happens the first time it is shown.
+/// the window has been realised - which only happens the first time it is shown.
 /// Calling it during setup panics inside the windowing layer.
 fn make_click_through(overlay: &WebviewWindow) {
     if let Err(error) = overlay.set_ignore_cursor_events(true) {
@@ -126,8 +126,8 @@ pub fn hide(app: &AppHandle) {
 
 fn place(app: &AppHandle, overlay: &WebviewWindow) -> tauri::Result<()> {
     // Size is reasserted here rather than only at startup: a size set on a window GTK
-    // has not realised does not stick, and the overlay is hidden — therefore
-    // unrealised — until the first time it is shown.
+    // has not realised does not stick, and the overlay is hidden - therefore
+    // unrealised - until the first time it is shown.
     //
     // The minimum is cleared first because WebKitGTK gives a webview a natural
     // minimum height larger than our capsule, and a GTK window will not shrink below

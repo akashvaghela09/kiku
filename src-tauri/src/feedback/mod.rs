@@ -1,7 +1,7 @@
 //! Audio going **out**: two short cues marking when Kiku starts and stops listening.
 //!
-//! Both live in `assets/sounds/` and are embedded in the binary. Audio coming **in** —
-//! the microphone — is `crate::audio`, which shares nothing with this but the cpal
+//! Both live in `assets/sounds/` and are embedded in the binary. Audio coming **in** -
+//! the microphone - is `crate::audio`, which shares nothing with this but the cpal
 //! dependency: opposite stream direction, a different sample rate, and a different
 //! resampler, because aliasing matters for speech and not for a blip.
 //!

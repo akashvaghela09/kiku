@@ -1,7 +1,7 @@
 //! Audio coming **in**: the microphone, and preparing what it hears for the recogniser.
 //!
 //! Everything leaving this module is 16 kHz mono f32, which is the only format the
-//! rest of Kiku knows about. Sound going **out** — the cues the user hears — is
+//! rest of Kiku knows about. Sound going **out** - the cues the user hears - is
 //! `crate::feedback`, which shares nothing with this but the cpal dependency.
 
 mod capture;

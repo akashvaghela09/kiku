@@ -7,7 +7,7 @@ import { events } from '@/lib/ipc';
  *
  * Deliberately not the same enum as the backend's `DictationState`: the backend knows
  * about idle, listening and processing, while the overlay additionally has to show
- * what *happened* — done, cancelled, failed — for long enough to be read.
+ * what *happened* - done, cancelled, failed - for long enough to be read.
  */
 export type CapsuleState =
   | 'hidden'
@@ -73,7 +73,7 @@ export function useOverlaySession(): Session {
 
     const unlisten = Promise.all([
       events.levelMeasured.listen((event) => {
-        // Already 0..1 and already gated against this microphone's noise floor —
+        // Already 0..1 and already gated against this microphone's noise floor -
         // see `audio::SpeechLevel`. Nullable only because a Rust f32 can be NaN,
         // which JSON cannot represent.
         levelRef.current = event.payload.speech ?? 0;
@@ -97,7 +97,7 @@ export function useOverlaySession(): Session {
       events.transcriptProduced.listen(() => settle('done')),
 
       events.dictationDiscarded.listen((event) => {
-        // A very short press is a mistap, not a failure — it gets the quiet
+        // A very short press is a mistap, not a failure - it gets the quiet
         // cancelled treatment rather than an error the user has to read.
         const reason = event.payload;
         if (reason === 'tooShort') settle('cancelled');

@@ -3,7 +3,7 @@ use kiku_lib::audio::SpeechLevel;
 
 #[test]
 fn the_measured_room_tone_of_this_machine_reads_as_silence() {
-    // 0.169 RMS is what an empty room measured here — a very hot microphone.
+    // 0.169 RMS is what an empty room measured here - a very hot microphone.
     let mut gate = SpeechLevel::new(30.0);
     let mut last = 1.0;
     for _ in 0..90 {

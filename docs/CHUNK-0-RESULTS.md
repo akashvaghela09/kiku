@@ -1,4 +1,4 @@
-# Chunk 0 — Engine gate results
+# Chunk 0 - Engine gate results
 
 **Verdict: PASSED.** Parakeet on CPU is comfortably fast enough. The Whisper decision
 stays closed, and no GPU code is needed anywhere in Kiku.
@@ -13,7 +13,7 @@ Reference human clip shipped with the model (7.43 s):
 > Well, I don't wish to see it any more, observed Phebe, turning away her eyes.
 > It is certainly very like the old portrait.
 
-Synthetic clip with known text (8.24 s) — transcribed **exactly**, including the
+Synthetic clip with known text (8.24 s) - transcribed **exactly**, including the
 product name and both sentence boundaries:
 
 > The quick brown fox jumps over the lazy dog. Kiku is an offline dictation tool
@@ -31,7 +31,7 @@ needed.
 | 15 s | 0.78 s | 0.052 | 19.1× |
 | 60 s | 4.08 s | 0.068 | 14.7× |
 
-Model load: **4.2 s**, paid once at startup — so the engine must be loaded eagerly and
+Model load: **4.2 s**, paid once at startup - so the engine must be loaded eagerly and
 kept warm, never loaded per dictation.
 
 ### Thread scaling (5 s clip)
@@ -44,14 +44,14 @@ kept warm, never loaded per dictation.
 | 8 | 0.27 s | 18.4× |
 
 Returns flatten after 4 threads. Default to `min(4, cores/2)` and leave headroom for
-the UI — chasing the last 15% would make dictation compete with the interface drawing
+the UI - chasing the last 15% would make dictation compete with the interface drawing
 the waveform.
 
 ## Findings that change the plan
 
 1. **The small model is probably unnecessary.** Even single-threaded the 0.6B runs 6×
    faster than real time. A machine too weak for that is too weak for a webview. The
-   110M model is therefore deferred, not cut — revisit only if a real device proves it
+   110M model is therefore deferred, not cut - revisit only if a real device proves it
    necessary. This removes the model picker from the first-run flow entirely.
 2. **`sherpa-rs` exposes no NeMo-CTC wrapper** (the `nemo_ctc` config field is always
    zeroed). Supporting the 110M CTC export would mean hand-written `sherpa-rs-sys` FFI.
@@ -61,7 +61,7 @@ the waveform.
    duration outputs.
 4. **Linking: the libraries must be bundled, not statically linked.**
    `download-binaries` produces `libsherpa-onnx-c-api.so` / `libsherpa-onnx-cxx-api.so`
-   which are *not* on the runtime path — the binary fails to start without
+   which are *not* on the runtime path - the binary fails to start without
    `LD_LIBRARY_PATH`. Enabling the `static` feature does not fix this: it demands
    `RUSTFLAGS="-C relocation-model=dynamic-no-pic"` (disabling PIE, and with it
    executable ASLR) and then still fails to link, because the prebuilt download ships
@@ -77,7 +77,7 @@ the waveform.
    Tauri approach for native dependencies and avoids both the source build and the
    ASLR trade-off.
 5. **Microphone input clips.** The default device (44.1 kHz, 2 ch) produced a peak of
-   1.015 — above full scale. Chunk 2 must clamp, and should surface a clipping warning
+   1.015 - above full scale. Chunk 2 must clamp, and should surface a clipping warning
    rather than silently distorting the audio the recogniser sees.
 6. **Linear resampling is a placeholder.** 44.1 kHz → 16 kHz by linear interpolation
    aliases. Chunk 2 should use `rubato` and re-measure accuracy afterwards.

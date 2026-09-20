@@ -64,7 +64,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     if (destructive && !armed) {
-      // One click arms, the next commits — cheaper than a dialog for actions that are
+      // One click arms, the next commits - cheaper than a dialog for actions that are
       // annoying rather than catastrophic, and it cannot be dismissed by accident.
       event.preventDefault();
       setArmed(true);

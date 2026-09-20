@@ -1,19 +1,19 @@
-# Kiku — Build Plan
+# Kiku - Build Plan
 
 Built in sequential chunks. Each chunk ends in something runnable and verifiable.
 Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`
 
 ---
 
-## Chunk 0 — Engine spike (gate) · `DONE`
+## Chunk 0 - Engine spike (gate) · `DONE`
 
 A throwaway headless Rust CLI proving the engine before any app exists.
 
 - [ ] `spike/asr-probe` Cargo project: `sherpa-rs`, `cpal`, `hound`, `anyhow`, `clap`
 - [ ] Download + pin the 0.6B v2 int8 model, verify checksums
-- [ ] `probe file <wav>` — transcribe a WAV, print text + wall-clock + RTF
-- [ ] `probe mic -s N` — record N seconds at 16 kHz mono, transcribe, print
-- [ ] `probe bench` — RTF across clip lengths (2s / 5s / 15s / 60s)
+- [ ] `probe file <wav>` - transcribe a WAV, print text + wall-clock + RTF
+- [ ] `probe mic -s N` - record N seconds at 16 kHz mono, transcribe, print
+- [ ] `probe bench` - RTF across clip lengths (2s / 5s / 15s / 60s)
 - [ ] Verify the 110M CTC model loads through the same code path
 - [ ] **Owner gate: transcribe Akash's own voice and judge the accuracy**
 
@@ -30,12 +30,12 @@ model is therefore the 437 MB non-int8 CTC build, not the ~200 MB originally ass
 
 ---
 
-## Chunk 1 — Skeleton · `DONE`
+## Chunk 1 - Skeleton · `DONE`
 Tauri 2 + React/TS/Tailwind/Lucide scaffold · domain-module layout · `tauri-specta`
 typed IPC · icon pipeline from the brand master · strict TS · clippy/rustfmt/ESLint ·
 CI building all three targets.
 
-## Chunk 2 — Audio capture · `DONE`
+## Chunk 2 - Audio capture · `DONE`
 `cpal` 0.18 device enumeration keyed on `DeviceId` (survives replugging better than a
 name) · opens the microphone at 16 kHz natively where the device allows it, skipping
 our resampler entirely · rubato FFT resampling otherwise, with tests proving a 15 kHz
@@ -44,7 +44,7 @@ with clipping detection, computed in the audio callback to drive the overlay wav
 10-minute recording ceiling · capture runs on its own thread because `cpal::Stream` is
 not `Send`, and device-open failures surface at `start()` rather than at `stop()`.
 
-## Chunk 3 — Engine layer · `DONE`
+## Chunk 3 - Engine layer · `DONE`
 `Engine` trait with one implementation (Parakeet via sherpa-onnx) · a single warm
 engine for the process lifetime, since loading costs ~4 s against a sub-second
 dictation budget · four-state status so the UI can say "still getting ready" rather
@@ -53,7 +53,7 @@ measurements showed returns flatten, leaving cores for the waveform · integrati
 runs the real model and asserts both the text and the real-time factor, skipping
 itself when no model is installed.
 
-## Chunk 4 — Model management · `DONE`
+## Chunk 4 - Model management · `DONE`
 Registry pins a Hugging Face commit, never a branch, and every file carries the
 SHA-256 it must hash to (verified against Hugging Face's own LFS object ids) ·
 resumable download into `.part` files, renamed into place only after the hash matches,
@@ -64,7 +64,7 @@ byte counts cross to the frontend as `f64`, which is exactly what a JavaScript n
 is · network integration test exercises the real endpoint using only the 9 KB tokens
 file.
 
-## Chunk 5 — Global hotkeys · `DONE`
+## Chunk 5 - Global hotkeys · `DONE`
 `Alt+Space` hold-to-talk and `Ctrl+Alt+Space` toggle · the hold/toggle semantics and
 key-repeat suppression live in a pure `Interpreter` that is tested without an OS ·
 rebinding rolls back to the previous pair if registration fails, so a conflict can
@@ -73,7 +73,7 @@ application is a warning at startup, not a failure to launch · also lands the
 `Dictation` session that hotkeys drive, with audio levels throttled from the audio
 callback rate to ~14 Hz before they reach the overlay.
 
-## Chunk 6 — Overlay · `DONE`
+## Chunk 6 - Overlay · `DONE`
 Transparent, always-on-top, click-through capsule, verified running on this machine ·
 placed on the monitor under the cursor, anchored to the **work area** so it clears the
 taskbar, recomputed on every show · bars radiate from the centre rather than scrolling
@@ -85,18 +85,18 @@ reduced-motion drops to 10 Hz rather than stopping, because the waveform answers
 being heard?" and that is information · Escape cancels, grabbed only while a session is
 running.
 
-## Chunk 7 — Output · `DONE`
+## Chunk 7 - Output · `DONE`
 Clipboard write is unconditional; the paste is synthesised on top of it, so a refused
 paste still leaves the text somewhere reachable · every modifier is released first,
 because hold-to-talk fires on key release and a user commonly lifts the space bar
-before Alt — without this, Ctrl+V would really be Ctrl+Alt+V · a settle delay covers
+before Alt - without this, Ctrl+V would really be Ctrl+Alt+V · a settle delay covers
 X11's clipboard ownership handshake · the paste modifier is released even when the
 keystroke fails, so a failure cannot leave Ctrl stuck down across the desktop ·
 whitespace is normalised (newlines included, which would otherwise submit a form),
 punctuation and capitalisation are left to the model.
 
-## Chunk 8 — Audio feedback · `DONE`
-Three cues synthesised in code — no audio files, so no licence to carry and no bytes
+## Chunk 8 - Audio feedback · `DONE`
+Three cues synthesised in code - no audio files, so no licence to carry and no bytes
 in the bundle · a rising blip to start, falling to finish, low double to discard ·
 phase-accumulated rather than evaluated per sample, and faded at both ends, because
 either mistake produces an audible click on every playback · tests assert the waveform
@@ -104,7 +104,7 @@ is continuous and starts and ends at silence, which is what a click actually is 
 cue opens an output stream and closes it rather than holding the audio device open for
 the whole session · a cue that cannot play is logged, never surfaced.
 
-## Chunk 9 — History · `DONE`
+## Chunk 9 - History · `DONE`
 SQLite with a migration runner present from the first release, which is the only way
 "survives updates" can actually hold · FTS5 search over external content, so a deleted
 transcript cannot survive in the search index · user input is sanitised into FTS5
@@ -113,15 +113,15 @@ error · pause recording, delete one, delete all, and an age-based purge · a hi
 that fails to open is logged and dictation continues, because refusing to launch over
 a history problem is the worse failure. UI lands in chunk 10.
 
-## Chunk 10 — Settings + onboarding · `DONE`
-Fourteen interface primitives, no more — `Row` and `Panel` carry most of the app, and
+## Chunk 10 - Settings + onboarding · `DONE`
+Fourteen interface primitives, no more - `Row` and `Panel` carry most of the app, and
 Settings contributes no components of its own · Settings is a sticky section list
 beside one continuous scroll rather than tabs, so nothing that might be blocking a
 user is hidden behind a click · rebinding captures a real key press instead of asking
 someone to type `Ctrl+Shift+Space` into a box · onboarding is three steps: get the
 model, grant the microphone, try it once · all three surfaces verified running.
 
-## Chunk 11 — Update check · `DONE`
+## Chunk 11 - Update check · `DONE`
 One GitHub Releases call, cached for a day, comparing semver and returning a URL ·
 never downloads, installs or executes anything · drafts and prereleases ignored · a
 non-semver tag reports Unknown rather than guessing · offline is `Unknown`, not an
@@ -129,7 +129,7 @@ error, because a failed update check is not worth interrupting anyone about · t
 version comparison is separated from the fetch so it is tested without a network.
 Banner UI lands in chunk 10.
 
-## Chunk 12 — Packaging · `DONE` (Linux verified; Windows and macOS untested)
+## Chunk 12 - Packaging · `DONE` (Linux verified; Windows and macOS untested)
 The sherpa-onnx shared libraries ship as bundle resources, listed per platform, with
 rpath entries covering both `cargo run` and an installed layout · **verified on
 Linux**: the deb places the binary at `/usr/bin/kiku` and the libraries at
@@ -150,21 +150,21 @@ build script emits.
 
 ## Sound feedback
 
-Two cues, in `src-tauri/src/feedback/` — named for its purpose rather than its medium.
+Two cues, in `src-tauri/src/feedback/` - named for its purpose rather than its medium.
 `audio/` is sound coming **in** from the microphone; `feedback/` is sound going **out**
 to the speakers. They share nothing but the cpal dependency: opposite stream
 directions, different sample rates, and different resamplers, because aliasing matters
 for speech and not for a 0.3 s blip.
 
-- `assets/sounds/start.wav` — Kiku started listening, on either shortcut
-- `assets/sounds/stop.wav` — Kiku stopped listening
+- `assets/sounds/start.wav` - Kiku started listening, on either shortcut
+- `assets/sounds/stop.wav` - Kiku stopped listening
 
 Both are 48 kHz mono and embedded with `include_bytes!`: no path to resolve, no
 difference between `cargo run` and an installed bundle, and no way for a cue to go
 missing. The originals are kept in `assets/sounds/source/`.
 
 Both cues are about **listening**, not about the result. A dictation that produces no
-text makes no sound at all — the overlay already says so, and a failure chime is one
+text makes no sound at all - the overlay already says so, and a failure chime is one
 more noise in a tool used dozens of times a day. Cancelling sounds the same as
 stopping, because the microphone closing is the thing the user needs to know.
 
@@ -186,15 +186,15 @@ released a moment ago, and feedback three hundred milliseconds later reads as la
 
 ## Cross-cutting standards
 
-**Rust** — domain modules not layer modules · `clippy -D warnings` in CI · `thiserror`
+**Rust** - domain modules not layer modules · `clippy -D warnings` in CI · `thiserror`
 for typed errors · no `unwrap()` outside tests · one abstraction (`Engine`), no
 speculative others.
 
-**TypeScript** — `strict: true` · `any` banned by lint · feature-folder slices ·
+**TypeScript** - `strict: true` · `any` banned by lint · feature-folder slices ·
 `invoke()` called only from `src/lib/ipc/`, never from components.
 
-**Styling** — design tokens as CSS custom properties; no literal hex in components, so
+**Styling** - design tokens as CSS custom properties; no literal hex in components, so
 light/dark and any rebrand are a one-file change.
 
-**IPC** — `tauri-specta` generates TS types from the Rust command signatures, so a
+**IPC** - `tauri-specta` generates TS types from the Rust command signatures, so a
 renamed field is a compile error rather than a runtime surprise.

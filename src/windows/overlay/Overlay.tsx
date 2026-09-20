@@ -4,7 +4,7 @@ import { WaveBars } from '@/features/overlay/WaveBars';
 import { type CapsuleState, useOverlaySession } from '@/features/overlay/useOverlaySession';
 
 /**
- * The capsule — Kiku's listening indicator, floating over whatever the user is in.
+ * The capsule - Kiku's listening indicator, floating over whatever the user is in.
  *
  * It is read peripherally, never focally, so it carries no text in its ordinary states
  * and communicates entirely through width and motion. Height is constant at 44px and

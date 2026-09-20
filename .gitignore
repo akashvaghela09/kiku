@@ -8,10 +8,6 @@ target/
 # committed once, before this file existed, and cost 717 MB.
 **/target/
 
-# Generated from the Rust command signatures by tauri-specta; never hand-edited, and a
-# stale checked-in copy is worse than none because it still compiles.
-src/lib/ipc/bindings.ts
-
 # Tauri generates these from tauri.conf.json at build time.
 src-tauri/gen/
 

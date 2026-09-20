@@ -30,8 +30,8 @@ import { usePreferences } from './usePreferences';
  * Settings: a sticky section list beside one continuous scroll.
  *
  * Not tabs. Eight groups is too many to sit across the top at this width, and tabs
- * would hide whichever section contains the thing currently blocking the user — a
- * missing permission, a model that will not load — behind a click. The nav doubles as
+ * would hide whichever section contains the thing currently blocking the user - a
+ * missing permission, a model that will not load - behind a click. The nav doubles as
  * a map that quietly says: this is all there is.
  */
 
@@ -186,7 +186,7 @@ export function SettingsView({ bindings, onBindingsChanged, onNotify }: Settings
             <Row
               align="start"
               title="Presets"
-              description="One key is easier to hold than a chord. Right Ctrl is watched rather than registered, so it still works as Ctrl everywhere else — pressing any other key while holding it cancels. Use a chord instead if your keyboard has no right Ctrl."
+              description="One key is easier to hold than a chord. Right Ctrl is watched rather than registered, so it still works as Ctrl everywhere else - pressing any other key while holding it cancels. Use a chord instead if your keyboard has no right Ctrl."
               trailing={
                 <div className="flex flex-wrap justify-end gap-1.5">
                   <Button

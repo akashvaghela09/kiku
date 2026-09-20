@@ -54,7 +54,7 @@ export function App() {
   return (
     <div className="relative flex h-full flex-col bg-surface">
       {/* `min-h-0` is what lets the view scroll instead of pushing the nav off the
-          bottom of the window — a flex child's default min-height is its content. */}
+          bottom of the window - a flex child's default min-height is its content. */}
       <div className="min-h-0 flex-1">
         {view === 'history' ? (
           <HistoryView

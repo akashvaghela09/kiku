@@ -9,7 +9,7 @@ export interface SliderProps {
   max?: number | undefined;
   step?: number | undefined;
   onChange: (value: number) => void;
-  /** Fires on release — the natural moment to play a preview once. */
+  /** Fires on release - the natural moment to play a preview once. */
   onCommit?: (value: number) => void | undefined;
   leadingIcon?: LucideIcon | undefined;
   trailingIcon?: LucideIcon | undefined;

@@ -2,7 +2,7 @@
 //!
 //! A binding is stored as a portable string such as `Alt+Space`. It is parsed into the
 //! platform shortcut type when registered, and rendered differently per platform when
-//! shown — a macOS user expects `⌥Space`, not `Alt+Space`.
+//! shown - a macOS user expects `⌥Space`, not `Alt+Space`.
 //!
 //! Only modifier-plus-key combinations exist here, because that is all the operating
 //! systems can register. Windows' `RegisterHotKey`, macOS' `RegisterEventHotKey` and
@@ -22,11 +22,11 @@ use crate::error::{Error, Result};
 ///
 /// A single key, because one key is far easier to *hold* than a chord, and Right Ctrl
 /// is never used alone by any operating system. It cannot be registered as a global
-/// shortcut — no platform accepts a bare modifier — so it is watched instead; see
+/// shortcut - no platform accepts a bare modifier - so it is watched instead; see
 /// [`super::watcher`].
 ///
 /// Not `Alt+Space`, which reads better but is genuinely contested: it opens the window
-/// system menu on Windows and on GNOME and Cinnamon — verified bound to
+/// system menu on Windows and on GNOME and Cinnamon - verified bound to
 /// `activate-window-menu` on the development machine.
 ///
 /// Mac keyboards have no right Control key, so macOS watches Right Option instead.
@@ -59,7 +59,7 @@ impl Hotkey {
         }
 
         // Single keys are watched rather than registered, so they never reach the
-        // platform's shortcut parser — which rejects bare modifiers outright.
+        // platform's shortcut parser - which rejects bare modifiers outright.
         if let Some(single) = SingleKey::parse(trimmed) {
             return Ok(Self {
                 spec: trimmed.to_owned(),
@@ -111,7 +111,7 @@ impl Hotkey {
 ///
 /// A bare letter or digit would fire in the middle of a sentence, which is why
 /// modifiers are normally required. Function keys never appear in prose, so binding
-/// one alone is safe — and a single key is far easier to *hold* than a three-key
+/// one alone is safe - and a single key is far easier to *hold* than a three-key
 /// chord, which matters for push-to-talk.
 fn is_safe_without_modifier(key: Code) -> bool {
     matches!(

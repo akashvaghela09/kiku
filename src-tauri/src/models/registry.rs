@@ -8,7 +8,7 @@
 //! Two entries. The 0.6B is the default and is what chunk 0 measured at eleven to
 //! nineteen times real time; the 110M is there for older machines and for anyone who
 //! would rather not keep 631 MB on disk. Both are transducers, so both load through
-//! the same engine — adding one was data, not code.
+//! the same engine - adding one was data, not code.
 
 /// One file within a model export.
 #[derive(Debug, Clone, Copy)]
@@ -23,7 +23,7 @@ pub struct RemoteFile {
 pub struct ModelSpec {
     /// Stable identifier, used as the on-disk directory name and in settings.
     pub id: &'static str,
-    /// Shown in the UI. Deliberately not a size or a parameter count — those ask the
+    /// Shown in the UI. Deliberately not a size or a parameter count - those ask the
     /// user a question they have no way to answer.
     pub name: &'static str,
     pub summary: &'static str,

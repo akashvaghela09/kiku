@@ -1,7 +1,7 @@
 //! Tidying a transcript before it is inserted into whatever the user is typing in.
 //!
 //! The model already produces punctuation and capitalisation, so this is not
-//! post-processing of the language — only of the whitespace, which the recogniser has
+//! post-processing of the language - only of the whitespace, which the recogniser has
 //! no opinion about and which matters a great deal when text is being spliced into a
 //! sentence someone else is writing.
 

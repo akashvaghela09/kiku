@@ -2,7 +2,7 @@
 //!
 //! Each cue opens an output stream, plays, and closes it. A persistent stream would
 //! shave perhaps twenty milliseconds off the start cue, at the cost of holding the
-//! audio device open for the entire time Kiku is running — which shows up in every
+//! audio device open for the entire time Kiku is running - which shows up in every
 //! system mixer and can keep a laptop's audio hardware awake. For a hundred-millisecond
 //! blip a few times an hour, that trade is not worth making.
 //!

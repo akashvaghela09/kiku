@@ -23,7 +23,7 @@ use crate::error::{Error, Result};
 ///
 /// Byte counts cross the boundary as `u32`. Specta rejects `u64` there to prevent
 /// silent precision loss, and maps every float to `number | null` because NaN cannot
-/// be represented in JSON — so a float would push a null into every call site. `u32`
+/// be represented in JSON - so a float would push a null into every call site. `u32`
 /// caps a model at four gigabytes, which is far beyond anything a lightweight
 /// dictation tool would ship.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]

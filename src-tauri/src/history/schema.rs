@@ -13,10 +13,10 @@ use rusqlite::Connection;
 
 use crate::error::{Error, Result};
 
-/// Applied in order. Append only — editing a shipped migration desynchronises every
+/// Applied in order. Append only - editing a shipped migration desynchronises every
 /// database that already ran it.
 const MIGRATIONS: &[&str] = &[
-    // 1 — transcripts, plus a full-text index kept in step by triggers.
+    // 1 - transcripts, plus a full-text index kept in step by triggers.
     r#"
     CREATE TABLE transcripts (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,

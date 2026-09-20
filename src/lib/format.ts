@@ -49,7 +49,7 @@ export function osKeyName(key: string): string {
  * general-purpose duration formatter.
  */
 export function formatDuration(ms: number): string {
-  if (!Number.isFinite(ms) || ms < 0) return '—';
+  if (!Number.isFinite(ms) || ms < 0) return '-';
   const seconds = ms / 1000;
   if (seconds < 10) return `${seconds.toFixed(1)}s`;
   if (seconds < 60) return `${Math.round(seconds)}s`;
@@ -61,7 +61,7 @@ export function formatDuration(ms: number): string {
 
 /** Bytes as MB or GB, at the precision a download progress line needs. */
 export function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes < 0) return '—';
+  if (!Number.isFinite(bytes) || bytes < 0) return '-';
   const mb = bytes / 1_048_576;
   if (mb < 1) return `${Math.round(bytes / 1024)} KB`;
   if (mb < 1024) return `${Math.round(mb)} MB`;

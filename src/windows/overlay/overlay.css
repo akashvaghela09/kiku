@@ -79,8 +79,8 @@ body,
 }
 
 /**
- * Reduced motion: the waveform keeps working — it answers "am I being heard?", which
- * is information, not decoration — but it drops to 10Hz in JavaScript and everything
+ * Reduced motion: the waveform keeps working - it answers "am I being heard?", which
+ * is information, not decoration - but it drops to 10Hz in JavaScript and everything
  * decorative here stops.
  */
 @media (prefers-reduced-motion: reduce) {

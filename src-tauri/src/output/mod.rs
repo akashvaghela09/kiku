@@ -1,6 +1,6 @@
 //! Delivering a transcript to the user.
 //!
-//! Always to the clipboard, and then — unless the user turned it off — pasted into
+//! Always to the clipboard, and then - unless the user turned it off - pasted into
 //! whatever has focus. The clipboard copy happens first and unconditionally, so a
 //! refused paste still leaves the text somewhere the user can reach it.
 
@@ -19,7 +19,7 @@ pub use text::prepare;
 pub enum Delivery {
     /// On the clipboard and pasted into the focused window.
     Pasted,
-    /// On the clipboard only — either the user turned pasting off, or the platform
+    /// On the clipboard only - either the user turned pasting off, or the platform
     /// refused to synthesise input.
     CopiedOnly,
 }

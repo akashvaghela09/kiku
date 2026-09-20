@@ -2,7 +2,7 @@
 //!
 //! A fixed threshold cannot do this. Microphone gain varies enormously between
 //! machines: on the development laptop an empty room measures −15 dBFS, where a fixed
-//! −58 dBFS floor would map silence to 85% of full scale and speech to 92% — bars
+//! −58 dBFS floor would map silence to 85% of full scale and speech to 92% - bars
 //! pinned near the top, twitching on room noise, saying nothing.
 //!
 //! So the floor is learned instead of assumed. The quietest moment in the last few
@@ -10,7 +10,7 @@
 //! far above it the current moment sits. Speech has to clear that floor by a margin
 //! before the waveform moves at all, which is what makes silence read as silence.
 //!
-//! Speech is full of short gaps — between words, inside stops — so even continuous
+//! Speech is full of short gaps - between words, inside stops - so even continuous
 //! talking keeps refreshing the floor. That is why a rolling minimum works here and a
 //! slow decay does not: a decaying floor gets dragged upward by sustained speech and
 //! then suppresses the very thing it is measuring.

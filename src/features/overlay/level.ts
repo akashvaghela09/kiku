@@ -1,7 +1,7 @@
 /**
  * Waveform shaping.
  *
- * The hard part — deciding whether a sound is speech or just the room — is done in
+ * The hard part - deciding whether a sound is speech or just the room - is done in
  * Rust, where it has the history to learn each microphone's noise floor and is covered
  * by tests. See `audio::SpeechLevel`. What arrives here is already 0 when nobody is
  * talking, so everything below is purely about how the bars move.
@@ -28,7 +28,7 @@ export const RING_COUNT = 8;
 /** How often the newest level is pushed into the ring buffer, in milliseconds. */
 export const RING_INTERVAL = 70;
 
-/** Shortest bar, as a fraction of the tallest. Never zero — zero reads as broken. */
+/** Shortest bar, as a fraction of the tallest. Never zero - zero reads as broken. */
 export const MIN_SCALE = 0.2;
 
 /**
@@ -36,7 +36,7 @@ export const MIN_SCALE = 0.2;
  *
  * `distance` is how many rings the bar sits from the centre. Energy decays as it
  * travels outward, which is what makes the shape radiate from the middle rather than
- * pump uniformly — the mark's own shortening arcs, animated.
+ * pump uniformly - the mark's own shortening arcs, animated.
  */
 export function barScale(historyAtRing: number, distance: number): number {
   const falloff = 1 - distance * 0.055;

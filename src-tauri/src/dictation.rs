@@ -1,4 +1,4 @@
-//! The dictation session — what actually happens between pressing the key and getting
+//! The dictation session - what actually happens between pressing the key and getting
 //! text back.
 //!
 //! One session at a time, deliberately. Two overlapping recordings would compete for
@@ -26,7 +26,7 @@ use crate::error::{Error, Result};
 
 /// How often audio levels are published to the overlay.
 ///
-/// The audio callback fires far more often than this — every few milliseconds — and
+/// The audio callback fires far more often than this - every few milliseconds - and
 /// forwarding each one would flood the IPC channel for a waveform that redraws at
 /// screen rate anyway. Thirty a second is smooth to the eye and cheap; sixty doubles
 /// the traffic during transcription for no visible gain.
@@ -47,7 +47,7 @@ pub enum DictationState {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub enum Discarded {
-    /// Released the key almost immediately — a mistap, not an utterance.
+    /// Released the key almost immediately - a mistap, not an utterance.
     TooShort,
     /// The microphone captured effectively nothing.
     Silent,
@@ -57,7 +57,7 @@ pub enum Discarded {
 
 /// What a finished session yielded.
 ///
-/// `Debug` is hand-written so a transcript never ends up in a log line — dictated text
+/// `Debug` is hand-written so a transcript never ends up in a log line - dictated text
 /// is the most private thing this application handles.
 pub enum Outcome {
     Transcribed(Box<Transcript>),
@@ -125,7 +125,7 @@ impl Dictation {
         if !matches!(*session, Session::Idle) {
             // Not an error: a second press while already listening is a user pressing
             // twice, and the right response is to carry on recording.
-            tracing::debug!("start ignored — a session is already running");
+            tracing::debug!("start ignored - a session is already running");
             return Ok(());
         }
 
@@ -177,12 +177,12 @@ impl Dictation {
         let recording = capture.stop()?;
 
         if held < MIN_UTTERANCE {
-            tracing::debug!(?held, "discarded — too short to be speech");
+            tracing::debug!(?held, "discarded - too short to be speech");
             return Ok(Outcome::Discarded(Discarded::TooShort));
         }
 
         if recording.is_silent() {
-            tracing::debug!("discarded — the microphone captured silence");
+            tracing::debug!("discarded - the microphone captured silence");
             return Ok(Outcome::Discarded(Discarded::Silent));
         }
 

@@ -3,7 +3,7 @@
  *
  * Every colour, radius, shadow and motion value in the app resolves through a
  * custom property declared here. Components must never contain a literal hex
- * value — that is what makes light/dark a one-file concern.
+ * value - that is what makes light/dark a one-file concern.
  *
  * Theming is driven solely by `data-theme` on <html>, written by an inline script
  * in each entry document before first paint. There is therefore exactly one dark
@@ -125,7 +125,7 @@
 }
 
 /**
- * Overlay palette — deliberately theme-independent.
+ * Overlay palette - deliberately theme-independent.
  *
  * The overlay floats over an arbitrary application, not over a Kiku window. Matching
  * the OS theme would be a promise about a surface we do not own, so the capsule is

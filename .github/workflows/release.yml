@@ -69,6 +69,14 @@ jobs:
 
       - run: npm ci
 
+      # bindings.ts is generated from the Rust command signatures and committed, so a
+      # fresh clone can typecheck without a Rust build. Regenerate it here and fail if
+      # it differs: that is what stops a stale copy from quietly compiling.
+      - name: Verify generated IPC bindings are current
+        working-directory: src-tauri
+        run: |
+          cargo test export_bindings
+          git diff --exit-code ../src/lib/ipc/bindings.ts
       - name: Check
         run: |
           npm run lint

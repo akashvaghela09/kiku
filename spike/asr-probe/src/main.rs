@@ -23,7 +23,7 @@ use engine::{Engine, ModelPaths};
 const DEFAULT_MODEL_DIR: &str = ".cache/kiku/models/parakeet-tdt-0.6b-v2-int8";
 
 #[derive(Parser)]
-#[command(name = "asr-probe", about = "Kiku chunk 0 — Parakeet engine gate")]
+#[command(name = "asr-probe", about = "Kiku chunk 0 - Parakeet engine gate")]
 struct Cli {
     /// Directory holding encoder/decoder/joiner/tokens.
     #[arg(long, global = true)]
@@ -108,7 +108,7 @@ fn report(label: &str, t: &engine::Transcription) {
         1.0 / t.rtf()
     );
     if t.text.is_empty() {
-        println!("text  <empty — silence or a failed decode>");
+        println!("text  <empty - silence or a failed decode>");
     } else {
         println!("text  {}", t.text);
     }
@@ -136,7 +136,7 @@ fn main() -> Result<()> {
 
         Command::Mic { seconds, device } => {
             let mut engine = load_engine(&cli)?;
-            println!("recording {seconds}s — speak now");
+            println!("recording {seconds}s - speak now");
 
             let captured = capture::record(
                 Duration::from_secs(*seconds),

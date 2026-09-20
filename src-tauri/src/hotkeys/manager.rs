@@ -1,7 +1,7 @@
 //! Interpreting what the dictation hotkeys mean.
 //!
 //! Hold versus toggle, and swallowing the key-repeat events some platforms emit while
-//! a shortcut is held, both live in [`Interpreter`] — which is pure, and therefore
+//! a shortcut is held, both live in [`Interpreter`] - which is pure, and therefore
 //! testable without an operating system. Registering the shortcuts with the platform
 //! is `runtime`'s job, because that needs an `AppHandle` and this does not.
 
@@ -22,7 +22,7 @@ pub enum HotkeyAction {
     HoldStarted,
     /// Hold-to-talk ended; the key came back up.
     HoldEnded,
-    /// Toggle pressed — start if idle, stop if listening.
+    /// Toggle pressed - start if idle, stop if listening.
     Toggled,
 }
 
@@ -48,8 +48,8 @@ impl Default for HotkeyBindings {
 /// the `holding` latch each repeat would restart the recording, so a held key would
 /// capture only the last few milliseconds before release.
 ///
-/// Either binding may be a watched single key rather than a registered shortcut — a
-/// bare modifier cannot be registered at all — in which case it is `None` here and
+/// Either binding may be a watched single key rather than a registered shortcut - a
+/// bare modifier cannot be registered at all - in which case it is `None` here and
 /// `watcher` reports it instead.
 #[derive(Debug)]
 pub struct Interpreter {
@@ -89,7 +89,7 @@ impl Interpreter {
         None
     }
 
-    /// Release the latch — used when a recording is cancelled by something other than
+    /// Release the latch - used when a recording is cancelled by something other than
     /// the key coming up, so the next press is not swallowed.
     pub fn reset(&self) {
         self.holding.store(false, Ordering::SeqCst);

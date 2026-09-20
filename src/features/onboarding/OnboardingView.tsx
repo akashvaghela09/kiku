@@ -76,7 +76,7 @@ export function OnboardingView({ bindings, onDone }: OnboardingProps) {
           <Panel
             icon={Download}
             title="Download the speech model"
-            description="This is a one-time download. Afterwards Kiku works entirely offline — nothing you say ever leaves this computer."
+            description="This is a one-time download. Afterwards Kiku works entirely offline - nothing you say ever leaves this computer."
             footer={
               <div className="flex items-center justify-between gap-3">
                 <span className="font-mono text-xs text-muted">

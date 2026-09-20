@@ -3,7 +3,7 @@
 //! Loading the model costs about four seconds. Dictation has a sub-second budget, so
 //! the model is loaded once in the background at startup and never unloaded. Everything
 //! here exists to make that single warm instance safe to share and honest about which
-//! state it is in — the UI must be able to say "still getting ready" rather than
+//! state it is in - the UI must be able to say "still getting ready" rather than
 //! appearing to ignore a hotkey.
 
 use std::sync::Mutex;
@@ -19,7 +19,7 @@ use crate::error::{Error, Result};
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase", tag = "state", content = "detail")]
 pub enum EngineStatus {
-    /// No model installed yet — onboarding has not finished.
+    /// No model installed yet - onboarding has not finished.
     Unloaded,
     /// Loading into memory; a hotkey pressed now should say "getting ready".
     Loading,

@@ -38,7 +38,7 @@ const PASTE_MODIFIER: Key = Key::Control;
 /// Synthesise a paste into whatever window currently has focus.
 ///
 /// The caller must have put the text on the clipboard first. Returns an error when
-/// the platform refuses to synthesise input — on macOS that means Accessibility
+/// the platform refuses to synthesise input - on macOS that means Accessibility
 /// permission has not been granted, which the UI turns into an actionable prompt.
 pub fn paste_into_focused_window() -> Result<()> {
     let mut enigo = Enigo::new(&Settings::default())

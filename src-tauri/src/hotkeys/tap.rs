@@ -1,6 +1,6 @@
 //! The press-and-hold state machine for a single-key shortcut.
 //!
-//! A bare modifier such as Right Ctrl cannot be registered as a global shortcut — no
+//! A bare modifier such as Right Ctrl cannot be registered as a global shortcut - no
 //! operating system accepts a modifier as a hotkey's main key. It has to be watched
 //! instead, and watching a key that *also* still works as a modifier needs rules:
 //!
@@ -13,7 +13,7 @@
 //!   anything else means the user is using it as a modifier, so the recording is
 //!   thrown away.
 //! * **Two quick taps latch.** Hands-free recording without holding anything, ended by
-//!   a third tap. Once latched, other keys no longer cancel — the whole point is to
+//!   a third tap. Once latched, other keys no longer cancel - the whole point is to
 //!   keep working while dictating.
 //!
 //! The machine is pure: it takes events and a clock and returns outcomes, so every
