@@ -70,18 +70,26 @@ impl SingleKey {
 
     /// How this key should be written for the user.
     pub fn display(self) -> &'static str {
+        // Each branch is a block expression rather than a bare match with `return`
+        // statements: the latter compiles, but clippy rejects it on the platform where
+        // the branch is live, which is exactly the platform it is never tested on
+        // locally.
         #[cfg(target_os = "macos")]
-        match self {
-            Self::RightControl => return "Right ⌃",
-            Self::RightAlt => return "Right ⌥",
-            Self::RightSuper => return "Right ⌘",
+        {
+            match self {
+                Self::RightControl => "Right ⌃",
+                Self::RightAlt => "Right ⌥",
+                Self::RightSuper => "Right ⌘",
+            }
         }
 
         #[cfg(not(target_os = "macos"))]
-        match self {
-            Self::RightControl => "Right Ctrl",
-            Self::RightAlt => "Right Alt",
-            Self::RightSuper => "Right Win",
+        {
+            match self {
+                Self::RightControl => "Right Ctrl",
+                Self::RightAlt => "Right Alt",
+                Self::RightSuper => "Right Win",
+            }
         }
     }
 }

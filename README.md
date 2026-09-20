@@ -7,7 +7,7 @@
 **Offline dictation for your desktop.**
 Hold a key, speak, and the text appears where you are already typing.
 
-[![Download](https://img.shields.io/badge/Download-v1.0.4-22A7CC?style=for-the-badge)](https://github.com/akashvaghela09/kiku/releases/latest)
+[![Download](https://img.shields.io/badge/Download-v1.0.5-22A7CC?style=for-the-badge)](https://github.com/akashvaghela09/kiku/releases/latest)
 [![Platforms](https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-1C8FAF?style=for-the-badge)](https://github.com/akashvaghela09/kiku/releases/latest)
 [![License](https://img.shields.io/badge/License-MIT-2A94B2?style=for-the-badge)](LICENSE)
 
@@ -58,14 +58,14 @@ operating system warns you once.
 Download the AppImage, make it executable, and run it:
 
 ```sh
-chmod +x Kiku_1.0.4_amd64.AppImage
-./Kiku_1.0.4_amd64.AppImage
+chmod +x Kiku_1.0.5_amd64.AppImage
+./Kiku_1.0.5_amd64.AppImage
 ```
 
 Or install the Debian package:
 
 ```sh
-sudo apt install ./Kiku_1.0.4_amd64.deb
+sudo apt install ./Kiku_1.0.5_amd64.deb
 ```
 
 X11 only for now. Wayland needs portal based shortcuts and `uinput` for pasting, which
