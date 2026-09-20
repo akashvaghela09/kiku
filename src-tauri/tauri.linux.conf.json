@@ -1,9 +1,0 @@
-{
-  "bundle": {
-    "resources": {
-      "target/release/libonnxruntime.so": "lib/libonnxruntime.so",
-      "target/release/libsherpa-onnx-c-api.so": "lib/libsherpa-onnx-c-api.so",
-      "target/release/libsherpa-onnx-cxx-api.so": "lib/libsherpa-onnx-cxx-api.so"
-    }
-  }
-}

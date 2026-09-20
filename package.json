@@ -1,6 +1,6 @@
 {
   "name": "kiku",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "type": "module",
   "description": "Offline dictation. Hold a key, speak, and the text appears where you're typing.",

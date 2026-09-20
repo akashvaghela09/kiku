@@ -18,3 +18,6 @@ src-tauri/gen/
 *.local
 *.log
 .DS_Store
+
+# Native libraries staged by build.rs from cargo's output directory.
+src-tauri/resources/
