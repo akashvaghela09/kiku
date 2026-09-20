@@ -46,7 +46,7 @@ async fn a_pinned_file_downloads_verifies_and_installs() {
 
     assert_eq!(store.state(&spec), InstallState::Missing);
 
-    let mut seen_progress = 0.0f64;
+    let mut seen_progress = 0u32;
     let observed = std::sync::Mutex::new(Vec::new());
     download(&store, &spec, |progress| {
         observed.lock().unwrap().push(progress.downloaded_bytes);
@@ -60,8 +60,8 @@ async fn a_pinned_file_downloads_verifies_and_installs() {
 
     assert_eq!(store.state(&spec), InstallState::Installed);
     assert_eq!(
-        seen_progress,
-        spec.total_bytes() as f64,
+        u64::from(seen_progress),
+        spec.total_bytes(),
         "progress must reach the total"
     );
 

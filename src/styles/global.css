@@ -142,3 +142,70 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+@layer components {
+  /* Loading dots inside a Button — keeps the button's width steady while working. */
+  .loading-dot {
+    animation: dot-bounce 900ms var(--ease-in-out) infinite;
+  }
+
+  @keyframes dot-bounce {
+    0%,
+    100% {
+      opacity: 0.35;
+    }
+    40% {
+      opacity: 1;
+    }
+  }
+
+  /* Indeterminate progress: a band travelling the track. */
+  .progress-indeterminate {
+    animation: progress-sweep 1200ms var(--ease-in-out) infinite;
+  }
+
+  @keyframes progress-sweep {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(400%);
+    }
+  }
+
+  .toast-enter {
+    animation: toast-in var(--dur-base) var(--ease-spring) both;
+  }
+
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Range input: the track is painted by an inline gradient, so only the thumb
+     needs styling — and it needs styling twice, once per engine. */
+  .kiku-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 9999px;
+    background: var(--surface);
+    border: 2px solid var(--accent);
+    cursor: pointer;
+  }
+
+  .kiku-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 9999px;
+    background: var(--surface);
+    border: 2px solid var(--accent);
+    cursor: pointer;
+  }
+}

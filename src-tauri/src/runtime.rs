@@ -101,6 +101,27 @@ fn cancel(app: &AppHandle) {
     hide_overlay(app);
 }
 
+/// Replace the registered hotkeys.
+///
+/// Unregisters everything first, then installs the new pair. If the new pair cannot be
+/// registered — because something else already owns it — the previous pair is put
+/// back, so a failed rebinding never leaves the user without a working shortcut.
+pub fn rebind(app: &AppHandle, next: HotkeyBindings) -> crate::Result<()> {
+    let previous = app.state::<AppState>().hotkeys.current();
+    app.global_shortcut().unregister_all().ok();
+
+    match install_hotkeys(app, next) {
+        Ok(()) => Ok(()),
+        Err(error) => {
+            app.global_shortcut().unregister_all().ok();
+            if let Err(rollback) = install_hotkeys(app, previous) {
+                tracing::error!(%rollback, "could not restore the previous hotkeys");
+            }
+            Err(error)
+        }
+    }
+}
+
 fn handle(app: &AppHandle, action: HotkeyAction) {
     tracing::debug!(?action, "hotkey action");
     let state = app.state::<AppState>();

@@ -21,30 +21,31 @@ use crate::error::{Error, Result};
 /// Progress for the model as a whole, not the individual file, because that is what a
 /// progress bar should show.
 ///
-/// Byte counts cross to the frontend as `f64` because that is precisely what a
-/// JavaScript number is. Specta rejects `u64` at the boundary to prevent silent
-/// precision loss, and widening here is more honest than narrowing to `u32` and
-/// capping the model size at 4 GB.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Type)]
+/// Byte counts cross the boundary as `u32`. Specta rejects `u64` there to prevent
+/// silent precision loss, and maps every float to `number | null` because NaN cannot
+/// be represented in JSON — so a float would push a null into every call site. `u32`
+/// caps a model at four gigabytes, which is far beyond anything a lightweight
+/// dictation tool would ship.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadProgress {
-    pub downloaded_bytes: f64,
-    pub total_bytes: f64,
+    pub downloaded_bytes: u32,
+    pub total_bytes: u32,
 }
 
 impl DownloadProgress {
     pub fn new(downloaded: u64, total: u64) -> Self {
         Self {
-            downloaded_bytes: downloaded as f64,
-            total_bytes: total as f64,
+            downloaded_bytes: downloaded.min(u64::from(u32::MAX)) as u32,
+            total_bytes: total.min(u64::from(u32::MAX)) as u32,
         }
     }
 
     pub fn fraction(&self) -> f32 {
-        if self.total_bytes <= 0.0 {
+        if self.total_bytes == 0 {
             return 0.0;
         }
-        (self.downloaded_bytes / self.total_bytes) as f32
+        f64::from(self.downloaded_bytes) as f32 / f64::from(self.total_bytes) as f32
     }
 }
 

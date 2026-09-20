@@ -19,14 +19,14 @@ use crate::error::{Error, Result};
 /// one.
 pub const PART_SUFFIX: &str = ".part";
 
-#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "camelCase", tag = "state", content = "detail")]
 pub enum InstallState {
     /// Nothing on disk.
     Missing,
-    /// A download was interrupted; bytes already fetched. `f64` for the same reason
-    /// as `DownloadProgress` — it is what a JavaScript number is.
-    Partial { downloaded: f64 },
+    /// A download was interrupted; bytes already fetched. See `DownloadProgress` for
+    /// why byte counts cross the boundary as `u32`.
+    Partial { downloaded: u32 },
     /// All files present at the expected sizes.
     Installed,
 }
@@ -89,7 +89,7 @@ impl ModelStore {
             InstallState::Missing
         } else {
             InstallState::Partial {
-                downloaded: downloaded as f64,
+                downloaded: downloaded as u32,
             }
         }
     }
@@ -222,7 +222,7 @@ mod tests {
         std::fs::write(dir.join(DEFAULT.files[3].path), b"not the real tokens").unwrap();
 
         match store.state(DEFAULT) {
-            InstallState::Partial { downloaded } => assert!(downloaded > 0.0),
+            InstallState::Partial { downloaded } => assert!(downloaded > 0),
             other => panic!("expected Partial, got {other:?}"),
         }
         let _ = std::fs::remove_dir_all(&root);

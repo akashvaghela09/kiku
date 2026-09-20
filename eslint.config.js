@@ -3,7 +3,18 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist', 'src-tauri', 'spike', 'node_modules', 'src/lib/ipc/bindings.ts'] },
+  {
+    ignores: [
+      'dist',
+      'src-tauri',
+      'spike',
+      'node_modules',
+      // Generated from the Rust command signatures.
+      'src/lib/ipc/bindings.ts',
+      // Worktrees created by other tooling; not this project's source.
+      '.kilo',
+    ],
+  },
   {
     files: ['**/*.{ts,tsx}'],
     extends: [js.configs.recommended, ...tseslint.configs.recommendedTypeChecked],

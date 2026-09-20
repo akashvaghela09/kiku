@@ -18,7 +18,7 @@ pub mod state;
 pub mod update;
 
 mod ipc;
-mod runtime;
+pub mod runtime;
 
 pub use error::{CommandResult, Error, ErrorPayload, Result};
 
@@ -44,6 +44,8 @@ fn specta_builder() -> Builder<tauri::Wry> {
             ipc::engine_status,
             ipc::hotkey_bindings,
             ipc::validate_hotkey,
+            ipc::set_hotkeys,
+            ipc::open_url,
             ipc::dictation_state,
             ipc::cancel_dictation,
             ipc::set_microphone,

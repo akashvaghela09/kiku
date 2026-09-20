@@ -17,16 +17,19 @@ use crate::error::{Error, Result};
 
 /// A stored dictation.
 ///
-/// `id` and `created_at` cross to the frontend as `f64`, matching the convention set
-/// by `DownloadProgress`: a JavaScript number *is* an `f64`, and both values sit far
-/// below 2^53, where that representation is exact. SQLite holds them as integers.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Type)]
+/// The wire types are chosen so nothing crosses the boundary as a float. Specta maps
+/// every Rust float to `number | null`, because NaN and infinity serialise as null,
+/// and threading that null through the whole interface would be a poor trade for
+/// values that are conceptually integers and instants.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Entry {
-    pub id: f64,
+    /// SQLite rowid. `u32` allows four billion dictations, which at a thousand a day
+    /// is eleven thousand years.
+    pub id: u32,
     pub text: String,
-    /// Unix milliseconds.
-    pub created_at: f64,
+    /// RFC 3339 in UTC — self-describing, exact, and parsed natively by `Date`.
+    pub created_at: String,
     pub audio_ms: u32,
     pub decode_ms: u32,
     pub model_id: Option<String>,
@@ -209,13 +212,25 @@ impl History {
 
 fn read_entry(row: &rusqlite::Row<'_>) -> rusqlite::Result<Entry> {
     Ok(Entry {
-        id: row.get::<_, i64>(0)? as f64,
+        id: row.get::<_, i64>(0)? as u32,
         text: row.get(1)?,
-        created_at: row.get::<_, i64>(2)? as f64,
+        created_at: to_rfc3339(row.get::<_, i64>(2)?),
         audio_ms: row.get(3)?,
         decode_ms: row.get(4)?,
         model_id: row.get(5)?,
     })
+}
+
+/// Unix milliseconds as an RFC 3339 timestamp in UTC.
+fn to_rfc3339(millis: i64) -> String {
+    time::OffsetDateTime::from_unix_timestamp_nanos(i128::from(millis) * 1_000_000)
+        .ok()
+        .and_then(|moment| {
+            moment
+                .format(&time::format_description::well_known::Rfc3339)
+                .ok()
+        })
+        .unwrap_or_default()
 }
 
 fn now_millis() -> i64 {
@@ -281,7 +296,11 @@ mod tests {
         assert_eq!(entry.audio_ms, 1500);
         assert_eq!(entry.decode_ms, 90);
         assert_eq!(entry.model_id.as_deref(), Some("parakeet"));
-        assert!(entry.created_at > 0.0);
+        assert!(
+            entry.created_at.contains('T') && entry.created_at.ends_with('Z'),
+            "expected RFC 3339 UTC, got {}",
+            entry.created_at
+        );
     }
 
     #[test]
@@ -345,7 +364,7 @@ mod tests {
     #[test]
     fn deleting_an_entry_removes_it_from_listings_and_search() {
         let history = history_with(&["confidential note"]);
-        let id = history.list(None, 10, 0).unwrap().entries[0].id as i64;
+        let id = i64::from(history.list(None, 10, 0).unwrap().entries[0].id);
 
         assert!(history.delete(id).unwrap());
         assert_eq!(history.count().unwrap(), 0);

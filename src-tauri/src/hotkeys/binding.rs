@@ -13,14 +13,19 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 use specta::Type;
-use tauri_plugin_global_shortcut::Shortcut;
+use tauri_plugin_global_shortcut::{Code, Shortcut};
 
 use crate::error::{Error, Result};
 
-/// Hold to talk. Released ends the recording.
-pub const DEFAULT_HOLD: &str = "Alt+Space";
+/// Hold to talk. Releasing the key ends the recording.
+///
+/// Not `Alt+Space`, which reads better but is genuinely contested: it opens the window
+/// system menu on Windows and on GNOME and Cinnamon — verified bound to
+/// `activate-window-menu` on the development machine. `Ctrl+Shift+Space` is unclaimed
+/// at the OS level on all three platforms.
+pub const DEFAULT_HOLD: &str = "Ctrl+Shift+Space";
 
-/// Press once to start, again to stop.
+/// Press once to start, again to stop. Same base key, so there is one thing to learn.
 pub const DEFAULT_TOGGLE: &str = "Ctrl+Alt+Space";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -48,7 +53,7 @@ impl Hotkey {
             ))
         })?;
 
-        if shortcut.mods.is_empty() {
+        if shortcut.mods.is_empty() && !is_safe_without_modifier(shortcut.key) {
             return Err(Error::Internal(format!(
                 "{trimmed} has no modifier. A shortcut without Ctrl, Alt, Shift or Cmd \
                  would fire while you type."
@@ -65,6 +70,40 @@ impl Hotkey {
         Shortcut::from_str(&self.spec)
             .map_err(|_| Error::Internal(format!("{} is no longer a valid shortcut.", self.spec)))
     }
+}
+
+/// Whether a key can be bound on its own.
+///
+/// A bare letter or digit would fire in the middle of a sentence, which is why
+/// modifiers are normally required. Function keys never appear in prose, so binding
+/// one alone is safe — and a single key is far easier to *hold* than a three-key
+/// chord, which matters for push-to-talk.
+fn is_safe_without_modifier(key: Code) -> bool {
+    matches!(
+        key,
+        Code::F1
+            | Code::F2
+            | Code::F3
+            | Code::F4
+            | Code::F5
+            | Code::F6
+            | Code::F7
+            | Code::F8
+            | Code::F9
+            | Code::F10
+            | Code::F11
+            | Code::F12
+            | Code::F13
+            | Code::F14
+            | Code::F15
+            | Code::F16
+            | Code::F17
+            | Code::F18
+            | Code::F19
+            | Code::F20
+            | Code::Pause
+            | Code::ScrollLock
+    )
 }
 
 /// Render a specification the way this platform's users expect to read it.
@@ -113,6 +152,25 @@ mod tests {
     fn both_defaults_are_valid() {
         assert!(Hotkey::parse(DEFAULT_HOLD).is_ok());
         assert!(Hotkey::parse(DEFAULT_TOGGLE).is_ok());
+    }
+
+    #[test]
+    fn a_function_key_may_be_bound_on_its_own() {
+        // The whole point of offering F9: one key is far easier to hold than three,
+        // and a function key cannot fire while typing.
+        for spec in ["F8", "F9", "F10"] {
+            assert!(Hotkey::parse(spec).is_ok(), "{spec} should be allowed");
+        }
+    }
+
+    #[test]
+    fn a_bare_letter_or_digit_is_still_rejected() {
+        for spec in ["A", "K", "1", "Space", "Enter"] {
+            assert!(
+                Hotkey::parse(spec).is_err(),
+                "{spec} should need a modifier"
+            );
+        }
     }
 
     #[test]

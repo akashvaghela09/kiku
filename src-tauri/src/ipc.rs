@@ -63,8 +63,8 @@ pub struct ModelInfo {
     pub id: String,
     pub name: String,
     pub summary: String,
-    /// See `DownloadProgress` for why byte counts cross the boundary as `f64`.
-    pub total_bytes: f64,
+    /// See `DownloadProgress` for why byte counts cross the boundary as `u32`.
+    pub total_bytes: u32,
     pub install: InstallState,
 }
 
@@ -78,7 +78,7 @@ pub fn list_models(state: State<'_, AppState>) -> CommandResult<Vec<ModelInfo>> 
             id: spec.id.to_owned(),
             name: spec.name.to_owned(),
             summary: spec.summary.to_owned(),
-            total_bytes: spec.total_bytes() as f64,
+            total_bytes: spec.total_bytes().min(u64::from(u32::MAX)) as u32,
             install: state.models.state(spec),
         })
         .collect())
@@ -154,6 +154,52 @@ pub fn validate_hotkey(spec: String) -> CommandResult<Hotkey> {
     Ok(Hotkey::parse(&spec)?)
 }
 
+/// Register a new pair of dictation shortcuts.
+///
+/// Both are validated before anything is unregistered, so a typo cannot take the
+/// working shortcuts away.
+#[tauri::command]
+#[specta::specta]
+pub fn set_hotkeys(
+    app: tauri::AppHandle,
+    bindings: HotkeyBindings,
+) -> CommandResult<HotkeyBindings> {
+    let validated = HotkeyBindings {
+        hold: Hotkey::parse(&bindings.hold.spec)?,
+        toggle: Hotkey::parse(&bindings.toggle.spec)?,
+    };
+
+    if validated.hold.spec == validated.toggle.spec {
+        return Err(
+            Error::Internal("Hold and toggle need to be different shortcuts.".into()).into(),
+        );
+    }
+
+    crate::runtime::rebind(&app, validated.clone())?;
+    Ok(validated)
+}
+
+/// Open a link in the user's browser.
+///
+/// The only outbound link in the application is the GitHub release page, which is why
+/// this exists at all.
+#[tauri::command]
+#[specta::specta]
+pub fn open_url(app: tauri::AppHandle, url: String) -> CommandResult<()> {
+    use tauri_plugin_opener::OpenerExt;
+
+    // Refuse anything that is not plainly a web link: `open` hands the string to the
+    // platform, where a `file:` or custom scheme would launch something local.
+    if !url.starts_with("https://") {
+        return Err(Error::Internal("Only https links can be opened.".into()).into());
+    }
+
+    app.opener()
+        .open_url(url, None::<&str>)
+        .map_err(|error| Error::Internal(error.to_string()))?;
+    Ok(())
+}
+
 // ------------------------------------------------------------------ dictation
 
 /// Whether Kiku is idle, listening or transcribing.
@@ -211,8 +257,8 @@ pub fn list_history(
 /// Delete one entry.
 #[tauri::command]
 #[specta::specta]
-pub fn delete_history_entry(state: State<'_, AppState>, id: f64) -> CommandResult<bool> {
-    Ok(state.history()?.delete(id as i64)?)
+pub fn delete_history_entry(state: State<'_, AppState>, id: u32) -> CommandResult<bool> {
+    Ok(state.history()?.delete(i64::from(id))?)
 }
 
 /// Delete every entry. Returns how many went.

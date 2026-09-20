@@ -113,9 +113,13 @@ error · pause recording, delete one, delete all, and an age-based purge · a hi
 that fails to open is logged and dictation continues, because refusing to launch over
 a history problem is the worse failure. UI lands in chunk 10.
 
-## Chunk 10 — Settings + onboarding · `TODO`
-First-run: welcome → model choice → download → permissions → first dictation.
-Settings: hotkeys, microphone, model, sounds, history, update check, about.
+## Chunk 10 — Settings + onboarding · `DONE`
+Fourteen interface primitives, no more — `Row` and `Panel` carry most of the app, and
+Settings contributes no components of its own · Settings is a sticky section list
+beside one continuous scroll rather than tabs, so nothing that might be blocking a
+user is hidden behind a click · rebinding captures a real key press instead of asking
+someone to type `Ctrl+Shift+Space` into a box · onboarding is three steps: get the
+model, grant the microphone, try it once · all three surfaces verified running.
 
 ## Chunk 11 — Update check · `DONE`
 One GitHub Releases call, cached for a day, comparing semver and returning a URL ·
@@ -130,6 +134,19 @@ AppImage + deb · MSI/NSIS · dmg (aarch64, ad-hoc signed) · GitHub Actions rel
 README with Gatekeeper/SmartScreen instructions · NVIDIA model attribution.
 
 ---
+
+## Follow-ups
+
+- **Hotkey presets.** `F9` / `F10` are offered in Settings and are the easiest keys to
+  *hold*, but Mac laptops map function keys to media unless standard function keys are
+  enabled. The shipped default stays `Ctrl+Shift+Space` / `Ctrl+Alt+Space`, which works
+  identically on all three platforms with no setup.
+- **`Alt+Space` is confirmed taken** on the development machine (`activate-window-menu`
+  in Cinnamon) and is the window menu on Windows too, which is why it is not the
+  default despite reading better.
+- **Synthetic key events do not trigger the X11 grab**, so the hotkey path could not be
+  exercised with `xdotool`. Everything downstream of it is verified; the key press
+  itself needs a physical test.
 
 ## Cross-cutting standards
 

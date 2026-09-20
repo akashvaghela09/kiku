@@ -122,9 +122,9 @@ impl HotkeyManager {
     /// Register `next`, rolling back to the previous bindings if it fails.
     ///
     /// Registration fails when another application already owns the combination —
-    /// `Alt+Space` in particular is the window menu on Windows and on several Linux
-    /// desktops. A rebinding attempt must never leave the user with no working hotkey,
-    /// so the old pair goes back on failure.
+    /// `Alt+Space`, a tempting choice, is the window menu on Windows and on several
+    /// Linux desktops. A rebinding attempt must never leave the user with no working
+    /// hotkey, so the old pair goes back on failure.
     pub fn apply<R: Runtime>(&self, app: &AppHandle<R>, next: HotkeyBindings) -> Result<()> {
         let previous = self.bindings();
         self.unregister(app, &previous);
@@ -286,7 +286,14 @@ mod tests {
     #[test]
     fn the_defaults_are_the_documented_pair() {
         let bindings = HotkeyBindings::default();
-        assert_eq!(bindings.hold.spec, "Alt+Space");
+        assert_eq!(bindings.hold.spec, "Ctrl+Shift+Space");
         assert_eq!(bindings.toggle.spec, "Ctrl+Alt+Space");
+    }
+
+    #[test]
+    fn the_defaults_share_a_base_key_so_there_is_one_thing_to_learn() {
+        let bindings = HotkeyBindings::default();
+        let base = |spec: &str| spec.rsplit('+').next().unwrap_or_default().to_owned();
+        assert_eq!(base(&bindings.hold.spec), base(&bindings.toggle.spec));
     }
 }
