@@ -71,7 +71,11 @@
     },
     "macOS": {
       "minimumSystemVersion": "11.0",
-      "signingIdentity": "-"
+      "signingIdentity": "-",
+      "hardenedRuntime": false,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Kiku listens while you hold the dictation key and turns what you say into text. Audio is transcribed on this Mac and never leaves it."
+      }
     },
     "windows": {
       "nsis": {
