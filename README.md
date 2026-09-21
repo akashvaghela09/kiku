@@ -61,15 +61,19 @@ Kiku is not code signed, so each operating system warns you once on first launch
 Download the AppImage, make it executable, and run it:
 
 ```sh
-chmod +x Kiku_1.2.0_amd64.AppImage
-./Kiku_1.2.0_amd64.AppImage
+chmod +x Kiku_*_amd64.AppImage
+./Kiku_*_amd64.AppImage
 ```
 
-Or install the Debian package:
+Or install a package:
 
 ```sh
-sudo apt install ./Kiku_1.2.0_amd64.deb
+sudo apt install ./Kiku_*_amd64.deb     # Debian, Ubuntu
+sudo dnf install ./Kiku-*.x86_64.rpm    # Fedora, RHEL
 ```
+
+The wildcards are so these keep working after a new version; run them from wherever
+the file was downloaded.
 
 X11 only for now. Wayland needs portal based shortcuts and `uinput` for pasting, and I
 have not built that yet.

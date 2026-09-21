@@ -35,9 +35,10 @@ all. That is not a failure; a Markdown change cannot break a build.
 
 ## 2. Bump the version
 
-The version lives in five places and every one of them has to agree. Tauri reads
-`tauri.conf.json`, cargo reads `Cargo.toml`, the lockfile has to match it or the build
-fails, and the README tells people what file they are about to download.
+The version lives in four places and every one of them has to agree. Tauri reads
+`tauri.conf.json`, cargo reads `Cargo.toml`, and the lockfile has to match `Cargo.toml`
+or the build fails. The README is deliberately not one of them: its install commands
+use wildcards, so it never needs touching for a release.
 
 ```sh
 OLD=1.1.4
@@ -46,13 +47,12 @@ NEW=1.1.5
 sed -i "s/\"version\": \"$OLD\"/\"version\": \"$NEW\"/" package.json src-tauri/tauri.conf.json
 sed -i "3s/^version = \"$OLD\"/version = \"$NEW\"/" src-tauri/Cargo.toml
 sed -i "/^name = \"kiku\"$/{n;s/^version = \"$OLD\"/version = \"$NEW\"/}" src-tauri/Cargo.lock
-sed -i "s/$OLD/$NEW/g" README.md
 ```
 
 Check it took:
 
 ```sh
-grep -rn "$NEW" package.json src-tauri/tauri.conf.json README.md
+grep -rn "$NEW" package.json src-tauri/tauri.conf.json
 sed -n '3p' src-tauri/Cargo.toml
 grep -A1 '^name = "kiku"$' src-tauri/Cargo.lock
 ```
