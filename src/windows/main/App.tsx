@@ -8,7 +8,13 @@ import { applyTheme } from '@/features/settings/theme';
 import { usePreferences } from '@/features/settings/usePreferences';
 import { NavigationRail } from '@/features/shell/NavigationRail';
 import type { View } from '@/features/shell/views';
-import { commands, events, type EngineStatus, type HotkeyBindings } from '@/lib/ipc';
+import {
+  commands,
+  events,
+  type EngineStatus,
+  type HotkeyBindings,
+  type UpdateStatus,
+} from '@/lib/ipc';
 
 /**
  * The application shell.
@@ -25,6 +31,8 @@ export function App() {
   const [section, setSection] = useState<string | null>(null);
   const [dismissedOnboarding, setDismissedOnboarding] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [version, setVersion] = useState<string | null>(null);
+  const [update, setUpdate] = useState<UpdateStatus | null>(null);
   const { preferences } = usePreferences();
 
   // Re-applied whenever the choice changes, and again on unmount, because "System"
@@ -43,9 +51,26 @@ export function App() {
       if (result.status === 'ok') setEngine(result.data);
     });
 
+    void commands.appInfo().then((result) => {
+      if (result.status === 'ok') setVersion(result.data.version);
+    });
+
     const unlisten = events.engineStatusChanged.listen((event) => setEngine(event.payload));
     return () => void unlisten.then((off) => off());
   }, [refreshBindings]);
+
+  // Re-checked when the preference changes, so switching it on asks immediately
+  // rather than at the next launch. The command already refuses to touch the network
+  // when it is off, and caches the answer for a day when it is on.
+  useEffect(() => {
+    if (!preferences.checkForUpdates) {
+      setUpdate(null);
+      return;
+    }
+    void commands.checkForUpdate(false).then((result) => {
+      setUpdate(result.status === 'ok' ? result.data : null);
+    });
+  }, [preferences.checkForUpdates]);
 
   const goToSection = useCallback((id: string) => {
     setView('settings');
@@ -79,6 +104,8 @@ export function App() {
         engine={engine}
         activeSection={section}
         onSection={goToSection}
+        version={version}
+        update={update}
       />
 
       <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">

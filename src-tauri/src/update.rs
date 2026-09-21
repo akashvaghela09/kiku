@@ -1,9 +1,10 @@
 //! Noticing that a newer Kiku exists.
 //!
-//! Kiku does not update itself. This asks GitHub once a day whether a newer release is
-//! published and shows a banner with a link; it never downloads, installs, or runs
-//! anything. The result of that fetch is remote data used for exactly one purpose -
-//! comparing a version string and displaying a URL.
+//! Kiku does not update itself. This asks GitHub once a day whether a newer release
+//! is published; the window then shows a badge beside the name and a row in settings,
+//! both of which do nothing but open the release page. Nothing here downloads,
+//! installs, or runs anything. The result of that fetch is remote
+//! data used for exactly one purpose: comparing a version string and displaying a URL.
 //!
 //! The check is the only network traffic Kiku makes after the model is installed, so
 //! it is cached to once a day, fails silently when offline, and can be switched off
