@@ -182,11 +182,11 @@ export function SettingsView({
         <section id="shortcuts" className="scroll-mt-6">
           <Panel
             title="Shortcuts"
-            description="Hold to talk, or press once to keep listening hands-free."
+            description={`Hold to talk, or tap ${defaultHoldLabel()} twice to keep listening hands-free.`}
           >
             <Row
               title="Hold to talk"
-              description="Recording stops the moment you let go."
+              description={`Recording stops the moment you let go. Tap ${defaultHoldLabel()} twice instead and it keeps listening until you tap again.`}
               trailing={
                 <HotkeyField
                   value={bindings.hold}
@@ -197,7 +197,7 @@ export function SettingsView({
             />
             <Row
               title="Toggle"
-              description="Press once to start, again to stop."
+              description="Press once to start, again to stop - the chord alternative to a double tap."
               trailing={
                 <HotkeyField
                   value={bindings.toggle}
@@ -209,7 +209,7 @@ export function SettingsView({
             <Row
               align="start"
               title="Presets"
-              description="One key is easier to hold than a chord. Right Ctrl is watched rather than registered, so it still works as Ctrl everywhere else - pressing any other key while holding it cancels. Use a chord instead if your keyboard has no right Ctrl."
+              description={`One key is easier to hold than a chord. ${defaultHoldLabel()} is watched rather than registered, so it keeps working as an ordinary modifier everywhere else - pressing any other key while holding it cancels. Use a chord instead if your keyboard has no usable right-hand modifier.`}
               trailing={
                 <div className="flex flex-wrap justify-end gap-1.5">
                   <Button

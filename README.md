@@ -33,13 +33,19 @@ on, once a day to ask whether a newer version exists.
 
 | Key | What happens |
 | :-- | :-- |
-| **Right Ctrl** (hold) | Records while held. Let go and the text is pasted. |
-| **Right Ctrl** (tap twice) | Hands free. Recording continues until you tap again. |
+| **Hold key** | Records while held. Let go and the text is pasted. |
+| **Hold key, tapped twice** | Hands free. Recording continues until you tap again. |
 | **Ctrl + Alt + Space** | Toggle, if you prefer a chord to a double tap. |
 | **Escape** | Cancel without transcribing. |
 
-On macOS the hold key is **Right Option**, because Mac keyboards have no right Control
-key.
+The hold key is **Right Ctrl** on Windows and Linux, and **Right Option** on macOS,
+because Mac keyboards have no right Control key. Everything else is the same on all
+three.
+
+| | Hold to talk | Hands free |
+| :-- | :-- | :-- |
+| **Windows / Linux** | Hold Right Ctrl | Tap Right Ctrl twice |
+| **macOS** | Hold Right Option | Tap Right Option twice |
 
 I picked a bare modifier because one key is far easier to hold than a chord, and no
 operating system claims Right Ctrl on its own. No platform will register a lone
