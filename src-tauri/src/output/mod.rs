@@ -41,7 +41,7 @@ pub fn deliver(app: &AppHandle, text: &str, auto_paste: bool) -> Result<Delivery
         return Ok(Delivery::CopiedOnly);
     }
 
-    match paste::paste_into_focused_window() {
+    match paste::paste_into_focused_window(app) {
         Ok(()) => Ok(Delivery::Pasted),
         Err(error) => {
             // Password fields, some terminals and a few Electron apps refuse
