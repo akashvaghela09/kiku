@@ -245,6 +245,7 @@ fn watch(
     };
     let mut machine = TapMachine::new(thresholds);
     let mut was_down = false;
+    let mut last_seen: Vec<Keycode> = Vec::new();
 
     tracing::info!(key = key.spec(), "watching a single-key shortcut");
 
@@ -254,6 +255,15 @@ fn watch(
 
         let is_down = pressed.contains(&key.keycode());
         let others = pressed.iter().any(|&code| is_other_key(code, key));
+
+        // What the platform actually reported, whenever it changes. The watched key
+        // being absent from a set that is plainly not empty is the signature of a
+        // keycode that does not match what this platform emits, which is a fault that
+        // is otherwise invisible: the key simply does nothing, with nothing logged.
+        if pressed != last_seen {
+            tracing::debug!(?pressed, watching = ?key.keycode(), is_down, "keys changed");
+            last_seen.clone_from(&pressed);
+        }
 
         // Edges first, so a hold is one Down rather than a stream of them.
         let input = match (was_down, is_down) {
@@ -265,6 +275,7 @@ fn watch(
         was_down = is_down;
 
         if let Some(outcome) = machine.advance(input, now) {
+            tracing::debug!(?input, ?outcome, "tap machine");
             on_outcome(outcome);
         }
 
