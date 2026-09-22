@@ -34,6 +34,21 @@ const MIN_PROCESSING_MS = 180;
  */
 const EXIT_MS = 160;
 
+/**
+ * How long a discarded tap waits before admitting it was discarded.
+ *
+ * The first half of a double tap *is* a discarded tap - released under the hold
+ * threshold, with the second press following 50-130ms later. Announcing it at once put
+ * the 44px "cancelled" capsule on screen between the two taps, so latching read as a
+ * recording that failed and restarted rather than as one gesture. Waiting lets the
+ * second tap's `clearTimers` overtake it, and the waveform never breaks.
+ *
+ * Deliberately shorter than the 500ms double-tap window in `hotkeys::tap`: a genuine
+ * mistap should not sit on screen pretending to listen. An unusually slow double tap
+ * can still flash, which is the cheaper of the two mistakes.
+ */
+const MISTAP_GRACE_MS = 240;
+
 /** How long each terminal state stays on screen before the overlay exits. */
 const HOLD_MS: Partial<Record<CapsuleState, number>> = {
   done: 420,
@@ -79,10 +94,10 @@ export function useOverlaySession(): Session {
     };
 
     /** Move to a terminal state, then disappear after it has been seen. */
-    const settle = (next: CapsuleState, text: string | null = null) => {
+    const settle = (next: CapsuleState, text: string | null = null, after?: number) => {
       clearTimers();
       const elapsed = Date.now() - processingSince.current;
-      const wait = Math.max(0, MIN_PROCESSING_MS - elapsed);
+      const wait = after ?? Math.max(0, MIN_PROCESSING_MS - elapsed);
 
       timers.push(
         window.setTimeout(() => {
@@ -140,7 +155,7 @@ export function useOverlaySession(): Session {
         // A very short press is a mistap, not a failure - it gets the quiet
         // cancelled treatment rather than an error the user has to read.
         const reason = event.payload;
-        if (reason === 'tooShort') settle('cancelled');
+        if (reason === 'tooShort') settle('cancelled', null, MISTAP_GRACE_MS);
         else if (reason === 'silent') settle('cancelled');
         else settle('error', "Didn't catch that");
       }),
