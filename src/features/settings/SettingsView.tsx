@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 
 import { Badge, Button, Dialog, Kbd, Panel, Progress, Row, Select, Toggle } from '@/components/ui';
-import { formatBytes, isMac } from '@/lib/format';
+import { formatBytes } from '@/lib/format';
 import {
   commands,
   events,
@@ -19,6 +19,15 @@ import { ViewToolbar } from '@/features/shell/ViewToolbar';
 import { VIEW_LABELS } from '@/features/shell/views';
 import { HotkeyField } from './HotkeyField';
 import { SETTINGS_SECTIONS } from './sections';
+import {
+  DEFAULT_TOGGLE,
+  FALLBACK_HOLD,
+  FALLBACK_TOGGLE,
+  FUNCTION_HOLD,
+  FUNCTION_TOGGLE,
+  defaultHold,
+  defaultHoldLabel,
+} from './shortcuts';
 import { THEMES } from './theme';
 import { usePreferences } from './usePreferences';
 
@@ -205,16 +214,19 @@ export function SettingsView({
                 <div className="flex flex-wrap justify-end gap-1.5">
                   <Button
                     size="sm"
-                    onClick={() => void applyPreset(singleKeyDefault(), 'Ctrl+Alt+Space')}
+                    onClick={() => void applyPreset(defaultHold(), DEFAULT_TOGGLE)}
                   >
-                    {singleKeyLabel()}
+                    {defaultHoldLabel()}
                   </Button>
-                  <Button size="sm" onClick={() => void applyPreset('F9', 'F10')}>
+                  <Button
+                    size="sm"
+                    onClick={() => void applyPreset(FUNCTION_HOLD, FUNCTION_TOGGLE)}
+                  >
                     F9 / F10
                   </Button>
                   <Button
                     size="sm"
-                    onClick={() => void applyPreset('Ctrl+Shift+Space', 'Ctrl+Alt+Space')}
+                    onClick={() => void applyPreset(FALLBACK_HOLD, FALLBACK_TOGGLE)}
                   >
                     Chord
                   </Button>
@@ -548,18 +560,6 @@ function ModelActions({
   );
 }
 
-/**
- * The single key to offer as the hold shortcut.
- *
- * Mac keyboards have no right Control key, so macOS gets Right Option instead.
- */
-function singleKeyDefault(): string {
-  return isMac() ? 'RightAlt' : 'RightControl';
-}
-
-function singleKeyLabel(): string {
-  return isMac() ? 'Right \u2325' : 'Right Ctrl';
-}
 
 function describeUpdate(status: UpdateStatus): string {
   switch (status.state) {

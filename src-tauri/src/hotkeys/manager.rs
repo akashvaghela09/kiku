@@ -11,7 +11,8 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 use tauri_plugin_global_shortcut::{Shortcut, ShortcutState};
 
-use super::binding::{Hotkey, DEFAULT_HOLD, DEFAULT_TOGGLE};
+use super::binding::Hotkey;
+use super::defaults::{DEFAULT_HOLD, DEFAULT_TOGGLE};
 use crate::error::Result;
 
 /// What the user meant by a key event.
@@ -113,7 +114,7 @@ mod tests {
     /// key and never reaches this code.
     fn chord_bindings() -> HotkeyBindings {
         HotkeyBindings {
-            hold: Hotkey::parse(super::super::FALLBACK_HOLD).unwrap(),
+            hold: Hotkey::parse(crate::hotkeys::defaults::FALLBACK_HOLD).unwrap(),
             toggle: Hotkey::parse(DEFAULT_TOGGLE).unwrap(),
         }
     }
@@ -233,7 +234,27 @@ mod tests {
             bindings.hold.single_key().is_some(),
             "holding should need one key, not a chord"
         );
-        assert_eq!(bindings.toggle.spec, "Ctrl+Alt+Space");
+        assert_eq!(bindings.toggle.spec, DEFAULT_TOGGLE);
+        assert!(
+            bindings.toggle.single_key().is_none(),
+            "the toggle is a chord, so it registers rather than being watched"
+        );
+    }
+
+    /// The defaults have to be usable as what they are, not merely parseable: the hold
+    /// key is watched and must be refused by the shortcut registrar, and the toggle is
+    /// registered and must be accepted by it.
+    #[test]
+    fn each_default_suits_the_path_that_delivers_it() {
+        let bindings = HotkeyBindings::default();
+        assert!(
+            bindings.hold.shortcut().is_err(),
+            "a bare modifier cannot register"
+        );
+        assert!(
+            bindings.toggle.shortcut().is_ok(),
+            "the toggle must register"
+        );
     }
 
     #[test]

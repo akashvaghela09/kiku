@@ -18,29 +18,8 @@ use tauri_plugin_global_shortcut::{Code, Shortcut};
 use super::watcher::SingleKey;
 use crate::error::{Error, Result};
 
-/// Hold to talk. Releasing the key ends the recording.
-///
-/// A single key, because one key is far easier to *hold* than a chord, and Right Ctrl
-/// is never used alone by any operating system. It cannot be registered as a global
-/// shortcut - no platform accepts a bare modifier - so it is watched instead; see
-/// [`super::watcher`].
-///
-/// Not `Alt+Space`, which reads better but is genuinely contested: it opens the window
-/// system menu on Windows and on GNOME and Cinnamon - verified bound to
-/// `activate-window-menu` on the development machine.
-///
-/// Mac keyboards have no right Control key, so macOS watches Right Option instead.
-#[cfg(target_os = "macos")]
-pub const DEFAULT_HOLD: &str = "RightAlt";
-#[cfg(not(target_os = "macos"))]
-pub const DEFAULT_HOLD: &str = "RightControl";
-
-/// Fallback for keyboards without a usable right-hand modifier, and for anyone who
-/// would rather have a chord. Unclaimed at the OS level on all three platforms.
-pub const FALLBACK_HOLD: &str = "Ctrl+Shift+Space";
-
-/// Press once to start, again to stop. Same base key, so there is one thing to learn.
-pub const DEFAULT_TOGGLE: &str = "Ctrl+Alt+Space";
+// The shipped bindings live in `defaults`, so there is one file to edit when they
+// change and no second copy to fall out of step with it.
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
@@ -182,6 +161,7 @@ fn display_for(spec: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::hotkeys::defaults::{DEFAULT_HOLD, DEFAULT_TOGGLE, FALLBACK_HOLD};
 
     #[test]
     fn every_default_is_valid() {

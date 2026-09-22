@@ -35,7 +35,7 @@ on, once a day to ask whether a newer version exists.
 | :-- | :-- |
 | **Right Ctrl** (hold) | Records while held. Let go and the text is pasted. |
 | **Right Ctrl** (tap twice) | Hands free. Recording continues until you tap again. |
-| **Ctrl + Alt + Space** | Toggle, if you prefer a chord. |
+| **Ctrl + Alt + Space** | Toggle, if you prefer a chord to a double tap. |
 | **Escape** | Cancel without transcribing. |
 
 On macOS the hold key is **Right Option**, because Mac keyboards have no right Control
@@ -48,8 +48,17 @@ therefore keeps working as Ctrl everywhere else, and **pressing any other key wh
 holding cancels the recording**. That is what stops Right Ctrl + C from copying and
 dictating at the same time.
 
+Tapping the hold key twice is the usual way into hands-free recording, and it needs no
+chord: double-tap Right Option on a Mac, or Right Ctrl elsewhere, and Kiku keeps
+listening until you tap again. The chord is there for keyboards whose right-hand
+modifier is awkward.
+
 Every shortcut can be reassigned in Settings, which also offers F9 or F10 for a single
 key, and Ctrl + Shift + Space for a chord that no platform has claimed.
+
+The defaults all live in
+[`src-tauri/src/hotkeys/defaults.rs`](src-tauri/src/hotkeys/defaults.rs), which is the
+only file to edit to change what a fresh install is bound to.
 
 ## Installing
 
