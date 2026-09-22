@@ -42,10 +42,25 @@ const SILENCE_DB: f32 = -90.0;
 const WINDOW_SECONDS: f32 = 3.0;
 
 /// Tracks the noise floor and reports how far above it the current audio is.
+/// Readings needed before a floor means anything, as a fraction of a second.
+///
+/// A third of a second is imperceptible at the start of a recording and is long enough
+/// for the floor to describe a room rather than one buffer.
+const WARMUP_SECONDS: f32 = 0.33;
+
+/// Readings the floor needs before a tenth of them is more than one.
+///
+/// Below this, [`SpeechLevel::floor_db`]'s percentile degenerates to the plain minimum
+/// and a single freak-quiet buffer is the floor again - briefly, but a meter that
+/// slams to full height for a fifth of a second at the start of every recording is
+/// exactly the artefact being removed.
+const FLOOR_MINIMUM_READINGS: usize = 11;
+
 #[derive(Debug)]
 pub struct SpeechLevel {
     recent: VecDeque<f32>,
     capacity: usize,
+    warmup: usize,
 }
 
 impl SpeechLevel {
@@ -55,6 +70,7 @@ impl SpeechLevel {
         Self {
             recent: VecDeque::with_capacity(capacity),
             capacity,
+            warmup: ((WARMUP_SECONDS * updates_per_second) as usize).max(FLOOR_MINIMUM_READINGS),
         }
     }
 
@@ -62,28 +78,53 @@ impl SpeechLevel {
     pub fn observe(&mut self, rms: f32) -> f32 {
         let db = to_db(rms);
 
-        if self.recent.len() == self.capacity {
-            self.recent.pop_front();
+        // Digital silence is not a noise floor. A stream that has been opened but is
+        // not yet delivering reports exact zeros, and no room is ever exactly zero.
+        //
+        // Letting one in pins the floor at SILENCE_DB for the entire window, and every
+        // sound after it then sits 60 dB above the floor - full scale, clamped. That is
+        // the waveform standing at maximum height for the first few seconds of a
+        // recording and then abruptly becoming sensible: the floor had aged out of the
+        // window.
+        if db > SILENCE_DB {
+            if self.recent.len() == self.capacity {
+                self.recent.pop_front();
+            }
+            self.recent.push_back(db);
         }
-        self.recent.push_back(db);
 
-        let floor = self
-            .recent
-            .iter()
-            .copied()
-            .fold(f32::INFINITY, f32::min)
-            .max(SILENCE_DB);
+        // Report silence rather than a guess until the room has been heard.
+        if self.recent.len() < self.warmup {
+            return 0.0;
+        }
+
+        let floor = self.floor_db();
 
         ((db - floor - MARGIN_DB) / SPAN_DB).clamp(0.0, 1.0)
     }
 
     /// The noise floor currently in use, in dBFS. Exposed for diagnostics.
+    ///
+    /// A low percentile rather than the outright minimum. The minimum is one sample,
+    /// and the opening moments of a stream supply bad ones: a half-filled first buffer
+    /// reads far quieter than the room ever is, becomes the floor, and puts ordinary
+    /// room tone tens of decibels above it - full scale, clamped - for as long as it
+    /// takes to age out of the window. That is the meter standing at full height for
+    /// the first seconds of a recording.
+    ///
+    /// Taking the tenth percentile costs nothing in the steady state, where the quietest
+    /// tenth of a window of room tone is room tone, and ignores the handful of freak
+    /// samples that a minimum cannot survive.
     pub fn floor_db(&self) -> f32 {
-        self.recent
-            .iter()
-            .copied()
-            .fold(f32::INFINITY, f32::min)
-            .max(SILENCE_DB)
+        if self.recent.is_empty() {
+            return SILENCE_DB;
+        }
+
+        let mut sorted: Vec<f32> = self.recent.iter().copied().collect();
+        sorted.sort_by(f32::total_cmp);
+
+        let index = (sorted.len() - 1) / 10;
+        sorted[index].max(SILENCE_DB)
     }
 }
 
@@ -110,6 +151,54 @@ mod tests {
             last = mapper.observe(rms);
         }
         last
+    }
+
+    /// The waveform stood at full height for the first seconds of every recording.
+    ///
+    /// The microphone stream delivers a buffer of exact zeros before it is really
+    /// running. That became the noise floor, and a floor of -90 dBFS puts ordinary room
+    /// tone 60 dB above it - clamped to full scale - until it aged out of the window.
+    #[test]
+    fn a_silent_first_buffer_does_not_pin_the_meter_at_full_scale() {
+        let mut mapper = mapper();
+
+        for _ in 0..5 {
+            mapper.observe(0.0);
+        }
+
+        let level = settle(&mut mapper, 0.05, 1.0);
+        assert_eq!(
+            level, 0.0,
+            "room tone after a silent start must still read as silence"
+        );
+    }
+
+    /// The half-filled opening buffer, which is not silent enough to be excluded as
+    /// digital silence but is far quieter than the room.
+    #[test]
+    fn one_freak_quiet_buffer_does_not_become_the_floor() {
+        let mut mapper = mapper();
+
+        mapper.observe(0.00002); // about -94 dBFS, then clamped to the silence floor
+        mapper.observe(0.0002); // about -74 dBFS: quiet, but a real reading
+
+        // A room thirty decibels louder than that must read as silence throughout -
+        // not eventually, once the bad sample has aged out.
+        let mut highest: f32 = 0.0;
+        for _ in 0..45 {
+            highest = highest.max(mapper.observe(0.006));
+        }
+
+        assert_eq!(
+            highest, 0.0,
+            "a single freak-quiet buffer must not pin the meter open, even briefly"
+        );
+    }
+
+    #[test]
+    fn nothing_is_reported_until_the_room_has_been_heard() {
+        let mut mapper = mapper();
+        assert_eq!(mapper.observe(0.5), 0.0, "the first reading is not a floor");
     }
 
     #[test]
