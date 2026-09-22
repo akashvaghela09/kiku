@@ -2543,6 +2543,7 @@ dependencies = [
  "enigo",
  "futures-util",
  "hound",
+ "macos-accessibility-client",
  "reqwest 0.12.28",
  "rubato",
  "rusqlite",

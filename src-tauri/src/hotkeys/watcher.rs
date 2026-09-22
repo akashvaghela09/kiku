@@ -60,11 +60,58 @@ impl SingleKey {
         }
     }
 
+    /// The `device_query` keycode this key is reported as.
+    ///
+    /// Platform-specific, because the crate reports Mac modifiers under their Mac
+    /// names: its macOS backend maps Right Option to `ROption` and Right Command to
+    /// `RCommand`, and emits `RAlt` or `RMeta` nowhere at all. Those are separate
+    /// variants of the same enum rather than aliases, so watching for `RAlt` on a Mac
+    /// watches for a key the backend never reports - which is exactly what made the
+    /// shipped macOS default, Right Option, impossible to press. Right Control was
+    /// unaffected, and Right Control is what Linux defaults to, so nothing on the
+    /// development machine could see it.
     fn keycode(self) -> Keycode {
-        match self {
-            Self::RightControl => Keycode::RControl,
-            Self::RightAlt => Keycode::RAlt,
-            Self::RightSuper => Keycode::RMeta,
+        #[cfg(target_os = "macos")]
+        {
+            match self {
+                Self::RightControl => Keycode::RControl,
+                Self::RightAlt => Keycode::ROption,
+                Self::RightSuper => Keycode::RCommand,
+            }
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            match self {
+                Self::RightControl => Keycode::RControl,
+                Self::RightAlt => Keycode::RAlt,
+                Self::RightSuper => Keycode::RMeta,
+            }
+        }
+    }
+
+    /// The left-hand counterpart of this key, which must not count as "another key".
+    ///
+    /// Same naming problem as [`Self::keycode`], with one extra wrinkle: the crate's
+    /// macOS backend calls the *left* command key `Command` and the right one
+    /// `RCommand`, so the pair here is not the `L`/`R` symmetry every other entry has.
+    fn twin(self) -> Keycode {
+        #[cfg(target_os = "macos")]
+        {
+            match self {
+                Self::RightControl => Keycode::LControl,
+                Self::RightAlt => Keycode::LOption,
+                Self::RightSuper => Keycode::Command,
+            }
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            match self {
+                Self::RightControl => Keycode::LControl,
+                Self::RightAlt => Keycode::LAlt,
+                Self::RightSuper => Keycode::LMeta,
+            }
         }
     }
 
@@ -106,12 +153,7 @@ fn is_other_key(pressed: Keycode, watched: SingleKey) -> bool {
 
     // The left-hand counterpart is reported alongside the right-hand key on X11, so
     // treating it as "another key" would cancel every recording immediately.
-    let twin = match watched {
-        SingleKey::RightControl => Keycode::LControl,
-        SingleKey::RightAlt => Keycode::LAlt,
-        SingleKey::RightSuper => Keycode::LMeta,
-    };
-    pressed != twin
+    pressed != watched.twin()
 }
 
 /// Runs a poll loop and reports what the user meant.
@@ -147,13 +189,60 @@ impl Drop for KeyWatcher {
     }
 }
 
+/// How long to wait between checks for the Accessibility grant.
+///
+/// Slow on purpose. Nothing can be watched until the user has been through System
+/// Settings, which takes as long as it takes.
+const ACCESS_RETRY_INTERVAL: Duration = Duration::from_secs(1);
+
+/// Block until the operating system will let us read key state, or the watcher stops.
+///
+/// `DeviceState::new()` is not used anywhere in Kiku: on macOS it is
+/// `assert!(has_accessibility(), ..)`, which panics this thread when the grant is
+/// missing. A panic here is silent - the thread dies, the process carries on, and the
+/// hotkey simply never fires again for the rest of the session, including after the
+/// user grants the permission it just asked for. `checked_new` reports the same
+/// condition as `None` and lets us wait for it instead.
+///
+/// The prompt is shown once. `application_is_trusted_with_prompt` re-opens that dialog
+/// every time it is called while the grant is missing, so polling with it would put a
+/// system dialog on screen once a second; the silent check is what the loop uses.
+fn await_device(running: &AtomicBool) -> Option<DeviceState> {
+    if let Some(device) = DeviceState::checked_new() {
+        return Some(device);
+    }
+
+    tracing::warn!("waiting for Accessibility before watching for the dictation key");
+
+    #[cfg(target_os = "macos")]
+    macos_accessibility_client::accessibility::application_is_trusted_with_prompt();
+
+    while running.load(Ordering::Relaxed) {
+        thread::sleep(ACCESS_RETRY_INTERVAL);
+
+        #[cfg(target_os = "macos")]
+        if !macos_accessibility_client::accessibility::application_is_trusted() {
+            continue;
+        }
+
+        if let Some(device) = DeviceState::checked_new() {
+            tracing::info!("Accessibility granted; the dictation key is now watched");
+            return Some(device);
+        }
+    }
+
+    None
+}
+
 fn watch(
     key: SingleKey,
     thresholds: Thresholds,
     running: &AtomicBool,
     on_outcome: impl Fn(Outcome) + Send + 'static,
 ) {
-    let device = DeviceState::new();
+    let Some(device) = await_device(running) else {
+        return;
+    };
     let mut machine = TapMachine::new(thresholds);
     let mut was_down = false;
 
@@ -216,9 +305,50 @@ mod tests {
     fn the_left_hand_twin_is_not_treated_as_another_key() {
         // Verified on X11: pressing Right Ctrl reports [LControl, RControl]. Counting
         // the left one as "another key" would cancel every recording on the next poll.
-        assert!(!is_other_key(Keycode::LControl, SingleKey::RightControl));
-        assert!(!is_other_key(Keycode::LAlt, SingleKey::RightAlt));
-        assert!(!is_other_key(Keycode::LMeta, SingleKey::RightSuper));
+        // Asked through `twin` rather than by naming keycodes, because which variants
+        // those are differs by platform.
+        for key in [
+            SingleKey::RightControl,
+            SingleKey::RightAlt,
+            SingleKey::RightSuper,
+        ] {
+            assert!(!is_other_key(key.twin(), key));
+        }
+    }
+
+    #[test]
+    fn a_watched_key_and_its_twin_are_different_keys() {
+        for key in [
+            SingleKey::RightControl,
+            SingleKey::RightAlt,
+            SingleKey::RightSuper,
+        ] {
+            assert_ne!(
+                key.keycode(),
+                key.twin(),
+                "{key:?} would cancel itself on every poll"
+            );
+        }
+    }
+
+    /// The bug that made the shipped macOS default impossible to press.
+    ///
+    /// `device_query`'s macOS backend maps Right Option to `ROption` and Right Command
+    /// to `RCommand`. `RAlt` and `RMeta` are separate variants that only Linux and
+    /// Windows ever emit, so watching for one on a Mac waits forever.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn mac_modifiers_are_watched_under_their_mac_keycodes() {
+        assert_eq!(SingleKey::RightAlt.keycode(), Keycode::ROption);
+        assert_eq!(SingleKey::RightSuper.keycode(), Keycode::RCommand);
+        assert_eq!(SingleKey::RightAlt.twin(), Keycode::LOption);
+
+        for key in [SingleKey::RightAlt, SingleKey::RightSuper] {
+            assert!(
+                !matches!(key.keycode(), Keycode::RAlt | Keycode::RMeta),
+                "{key:?} is watched for a keycode macOS never reports"
+            );
+        }
     }
 
     #[test]

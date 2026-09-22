@@ -66,3 +66,10 @@ strip = true
 [dev-dependencies]
 hound = "3.5"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+# Already in the tree as a dependency of device_query. Named directly so the key
+# watcher can ask whether Accessibility has been granted *without* prompting:
+# device_query only exposes the prompting check, and calling that in a retry loop
+# reopens the system dialog every time round.
+[target.'cfg(target_os = "macos")'.dependencies]
+macos-accessibility-client = "0.0.1"
