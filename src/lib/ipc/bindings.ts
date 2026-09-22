@@ -303,8 +303,7 @@ export type SoundCue =
 /**
  *  User preferences that affect how a transcript is delivered.
  * 
- *  Persisted to disk in chunk 10; held here so the rest of the application can already
- *  read them from one place.
+ *  Persisted by [`crate::settings`], which is also what seeds them at launch.
  *  Which palette the main window uses.
  * 
  *  The overlay is deliberately not covered by this. It floats over an arbitrary

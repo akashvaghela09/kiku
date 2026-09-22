@@ -16,11 +16,11 @@ use crate::error::{Error, Result};
 use crate::history::History;
 use crate::hotkeys::{HotkeyBindings, KeyWatcher};
 use crate::models::ModelStore;
+use crate::settings::Settings;
 
 /// User preferences that affect how a transcript is delivered.
 ///
-/// Persisted to disk in chunk 10; held here so the rest of the application can already
-/// read them from one place.
+/// Persisted by [`crate::settings`], which is also what seeds them at launch.
 /// Which palette the main window uses.
 ///
 /// The overlay is deliberately not covered by this. It floats over an arbitrary
@@ -99,15 +99,41 @@ impl AppState {
             }
         };
 
+        let stored = Settings::load(&data_dir);
+
+        let hotkeys = HotkeyState::default();
+        // Adopted before anything is registered, so `setup` can read back what the
+        // user last chose and install that instead of the shipped default.
+        hotkeys.adopt(stored.hotkeys);
+
         Self {
             models: ModelStore::new(&data_dir),
             asr: AsrService::new(),
             dictation: Dictation::new(),
-            hotkeys: HotkeyState::default(),
+            hotkeys,
             data_dir,
-            microphone: Mutex::new(None),
-            preferences: Mutex::new(Preferences::default()),
+            microphone: Mutex::new(stored.microphone),
+            preferences: Mutex::new(stored.preferences),
             history,
+        }
+    }
+
+    /// Write the current settings to disk.
+    ///
+    /// Called by every setter rather than on a timer or at shutdown: a preference
+    /// changed and then lost to a crash - or to a quit the application never sees,
+    /// which on macOS is most of them - is indistinguishable from one that was never
+    /// saved. Failing to write is logged and otherwise ignored, because a settings
+    /// file that cannot be written is not a reason to refuse the setting.
+    pub fn save(&self) {
+        let settings = Settings {
+            preferences: self.preferences(),
+            hotkeys: self.hotkeys.current(),
+            microphone: self.microphone(),
+        };
+
+        if let Err(error) = settings.save(&self.data_dir) {
+            tracing::warn!(%error, "settings could not be saved");
         }
     }
 
@@ -125,9 +151,13 @@ impl AppState {
     }
 
     pub fn set_preferences(&self, next: Preferences) {
+        // The guard is dropped before `save`, which reads the same mutex back. A
+        // std::sync::Mutex is not reentrant, so holding it across that call would
+        // deadlock the command thread.
         if let Ok(mut current) = self.preferences.lock() {
             *current = next;
         }
+        self.save();
     }
 
     pub fn microphone(&self) -> Option<String> {
@@ -138,6 +168,7 @@ impl AppState {
         if let Ok(mut current) = self.microphone.lock() {
             *current = id;
         }
+        self.save();
     }
 }
 

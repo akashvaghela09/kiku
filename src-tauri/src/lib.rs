@@ -19,6 +19,7 @@ pub mod update;
 
 mod ipc;
 pub mod runtime;
+pub mod settings;
 
 pub use error::{CommandResult, Error, ErrorPayload, Result};
 
@@ -92,7 +93,10 @@ pub fn run() {
             std::fs::create_dir_all(&data_dir)?;
             tracing::info!(path = %data_dir.display(), "application data directory");
 
-            app.manage(AppState::new(data_dir));
+            let state = AppState::new(data_dir);
+            // Whatever the user last chose, or the shipped default on a first run.
+            let bindings = state.hotkeys.current();
+            app.manage(state);
 
             // The overlay window is created at launch and merely hidden, never created
             // on demand: creating an OS window costs 30-120 ms of visible lag, which is
@@ -100,9 +104,7 @@ pub fn run() {
             // A hotkey already owned by another application must not stop Kiku from
             // starting: the window opens, Settings shows the conflict, and the user
             // rebinds.
-            if let Err(error) =
-                runtime::install_hotkeys(app.handle(), crate::hotkeys::HotkeyBindings::default())
-            {
+            if let Err(error) = runtime::install_hotkeys(app.handle(), bindings) {
                 tracing::warn!(%error, "dictation hotkeys are unavailable");
             }
 
