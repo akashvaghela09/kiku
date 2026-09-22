@@ -5,6 +5,8 @@
 //! their own.
 
 use std::str::FromStr;
+use std::sync::{mpsc, OnceLock};
+use std::thread;
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
@@ -58,7 +60,11 @@ pub fn install_hotkeys(app: &AppHandle, bindings: HotkeyBindings) -> crate::Resu
         toggle = %bindings.toggle.spec,
         "dictation hotkeys installed"
     );
-    app.state::<AppState>().hotkeys.adopt(bindings);
+    let state = app.state::<AppState>();
+    state.hotkeys.adopt(bindings);
+    // Hotkeys are the one setting that does not go through `AppState`'s own setters,
+    // so this is where a rebinding is written out.
+    state.save();
     Ok(())
 }
 
@@ -91,6 +97,62 @@ fn escape_shortcut() -> Option<Shortcut> {
     Shortcut::from_str("Escape").ok()
 }
 
+/// Work to run away from the shortcut dispatch.
+type Job = Box<dyn FnOnce(&AppHandle) + Send + 'static>;
+
+/// Sender into the hotkey worker, or `None` if its thread could not be started.
+static QUEUE: OnceLock<Option<mpsc::Sender<Job>>> = OnceLock::new();
+
+/// Hand work to the hotkey thread instead of doing it inside a shortcut callback.
+///
+/// A registered chord is delivered by `tauri-plugin-global-shortcut`, whose dispatcher
+/// holds its registry mutex for the entire duration of the handler it calls:
+///
+/// ```ignore
+/// if let Some(shortcut) = shortcuts_.lock().unwrap().get(&e.id) {
+///     handler(&app_handle, &shortcut.shortcut, e);   // our code runs here
+/// }
+/// ```
+///
+/// So `grab_escape`, which registers Escape for the duration of a recording, asks for
+/// a `std::sync::Mutex` that this very thread already holds. It is the main thread, so
+/// the whole application stops: nothing redraws, the capture thread never sees its
+/// stop flag, and the microphone stays open until the process is killed.
+///
+/// A dedicated thread is what breaks it. `run_on_main_thread` looks like the obvious
+/// answer and is not: `send_user_message` runs the closure *inline* when it is already
+/// on the main thread, so the work happens in the same call stack, still inside the
+/// dispatch, still holding the lock. That was tried, and deadlocked identically.
+///
+/// One thread rather than a pool, because the order matters - a start must not overtake
+/// the stop that follows it - and a channel gives that for free. Tauri's window calls
+/// are safe from here: they post to the event loop themselves, which is what the
+/// watched-key path has always relied on.
+fn on_next_turn(app: &AppHandle, work: impl FnOnce(&AppHandle) + Send + 'static) {
+    let queue = QUEUE.get_or_init(|| {
+        let (sender, receiver) = mpsc::channel::<Job>();
+        let worker = app.clone();
+
+        thread::Builder::new()
+            .name("kiku-hotkey".into())
+            .spawn(move || {
+                for job in receiver {
+                    job(&worker);
+                }
+            })
+            .map(|_| sender)
+            .map_err(|error| tracing::error!(%error, "could not start the hotkey thread"))
+            .ok()
+    });
+
+    let Some(queue) = queue.as_ref() else {
+        return;
+    };
+    if queue.send(Box::new(work)).is_err() {
+        tracing::error!("the hotkey thread is gone; the shortcut did nothing");
+    }
+}
+
 fn grab_escape(app: &AppHandle) {
     let Some(escape) = escape_shortcut() else {
         return;
@@ -101,7 +163,9 @@ fn grab_escape(app: &AppHandle) {
         .global_shortcut()
         .on_shortcut(escape, move |_, _, event| {
             if matches!(event.state(), ShortcutState::Pressed) {
-                cancel(&handler_app);
+                // Escape arrives through the same dispatcher, so cancelling has to be
+                // queued for exactly the same reason.
+                on_next_turn(&handler_app, cancel);
             }
         })
     {
@@ -158,8 +222,18 @@ pub fn rebind(app: &AppHandle, next: HotkeyBindings) -> crate::Result<()> {
     }
 }
 
+/// Entry point for every hotkey, from either delivery path.
+///
+/// The work is queued rather than run here: see [`on_next_turn`]. A watched single key
+/// arrives on its own thread and would be safe either way, but routing both paths
+/// through the same queue keeps their ordering identical and means there is only one
+/// rule to remember.
 fn handle(app: &AppHandle, action: HotkeyAction) {
     tracing::debug!(?action, "hotkey action");
+    on_next_turn(app, move |app| act(app, action));
+}
+
+fn act(app: &AppHandle, action: HotkeyAction) {
     let state = app.state::<AppState>();
 
     match action {
@@ -195,10 +269,19 @@ fn start(app: &AppHandle) {
 
     match result {
         Ok(()) => {
+            // Step by step, because every one of these can block and the symptom when
+            // one does is identical from the outside: the interface stops, with no
+            // indication of which call never returned. Finding that the first time
+            // cost a stack sample of a wedged process.
+            tracing::debug!("microphone open");
             feedback::play(Cue::Start, state.preferences().sounds);
+            tracing::debug!("start tone played");
             grab_escape(app);
+            tracing::debug!("escape grabbed");
             show_overlay(app);
+            tracing::debug!("overlay shown");
             publish_state(app, DictationState::Listening);
+            tracing::debug!("listening");
         }
         Err(error) => {
             tracing::error!(%error, "could not start dictation");
@@ -214,9 +297,11 @@ fn stop(app: &AppHandle) {
         return;
     }
 
+    tracing::debug!("stopping");
     release_escape(app);
     feedback::play(Cue::Stop, state.preferences().sounds);
     publish_state(app, DictationState::Processing);
+    tracing::debug!("transcribing");
 
     // Decoding blocks for a few hundred milliseconds; keep it off the event loop so
     // the overlay keeps animating.
