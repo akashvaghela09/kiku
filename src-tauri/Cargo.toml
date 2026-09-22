@@ -17,7 +17,14 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.6", features = [] }
 
 [dependencies]
-tauri = { version = "2.11", features = ["tray-icon", "image-png"] }
+# macos-private-api backs `macOSPrivateApi` in tauri.conf.json, which is what makes a
+# transparent window actually transparent on macOS; without it the overlay is drawn on
+# an opaque white sheet. It rules out the Mac App Store, which Kiku does not use.
+tauri = { version = "2.11", features = [
+  "tray-icon",
+  "image-png",
+  "macos-private-api",
+] }
 tauri-plugin-clipboard-manager = "2.3"
 tauri-plugin-global-shortcut = "2.3"
 tauri-plugin-opener = "2.5"
