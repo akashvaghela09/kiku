@@ -113,6 +113,33 @@ pub async fn download_model(
     })
     .await?;
 
+    // Load it, unless a model is already loaded or on its way.
+    //
+    // `use_model` was the only path that ever loaded one, so onboarding ended with a
+    // model on disk, a recogniser still empty, and no way to tell the difference from
+    // the first screen: the download reported success and dictation stayed dead until
+    // the user went to Settings and chose the model they had just downloaded. A
+    // restart also fixed it, because startup loads whichever model is installed, which
+    // is what made it look intermittent.
+    //
+    // Guarded rather than unconditional: downloading a second model while a first one
+    // is working is a download, not a request to switch. That is what `use_model` is
+    // for, and it is the only thing that writes the preference.
+    let handle = app.clone();
+    let id = model_id.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let busy = {
+            let state = handle.state::<AppState>();
+            matches!(
+                state.asr.status(),
+                EngineStatus::Ready(_) | EngineStatus::Loading
+            )
+        };
+        if !busy {
+            crate::load_model(&handle, Some(&id));
+        }
+    });
+
     Ok(())
 }
 
