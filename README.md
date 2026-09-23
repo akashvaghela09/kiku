@@ -33,16 +33,25 @@ on, once a day to ask whether a newer version exists.
 
 One key, two ways to use it.
 
-| | Hold to talk | Hands free |
-| :-- | :-- | :-- |
-| **Windows / Linux** | Hold Right Ctrl | Tap Right Ctrl twice |
-| **macOS** | Hold Right Option | Tap Right Option twice |
+| Action | Windows | Linux | macOS |
+| :-- | :-- | :-- | :-- |
+| **Hold to talk** | Hold Right Ctrl | Hold Right Ctrl | Hold Right Option |
+| **Hands free** | Double-tap Right Ctrl | Double-tap Right Ctrl | Double-tap Right Option |
+| **Stop hands free** | Tap Right Ctrl | Tap Right Ctrl | Tap Right Option |
+| **Cancel** | Esc | Esc | Esc |
 
-Holding records for as long as you hold. Tapping twice keeps listening until you tap
-again, so you can dictate with both hands free. Press Escape to throw a recording away
-without transcribing it.
+Only the key differs, and only on macOS: Mac keyboards have no right Control key, so
+Right Option takes its place. The gestures are identical everywhere.
 
-Mac keyboards have no right Control key, which is the only reason the two differ.
+Holding records for as long as you hold, and the text is pasted when you let go.
+Double-tapping keeps listening until you tap once more, so you can dictate with both
+hands free. Escape throws a recording away without transcribing it.
+
+Both modes start on the one key. Settings binds them separately, so hands free can have
+a key of its own - any right-hand modifier, since those are the keys Kiku can watch
+being tapped twice. The defaults live in
+[`src-tauri/src/hotkeys/defaults.rs`](src-tauri/src/hotkeys/defaults.rs), the only file
+to edit to change what a fresh install gets.
 
 A bare modifier is deliberate: one key is far easier to *hold* than a chord, and no
 operating system claims a right-hand modifier on its own. No platform will register a
@@ -51,34 +60,30 @@ therefore keeps working as an ordinary modifier everywhere else, and **pressing 
 other key while holding cancels the recording** - which is what stops Right Ctrl + C
 from copying and dictating at the same time.
 
-Settings will bind any right-hand modifier, so pick whichever your keyboard has. The
-default lives in
-[`src-tauri/src/hotkeys/defaults.rs`](src-tauri/src/hotkeys/defaults.rs), the only file
-to edit to change what a fresh install gets.
+Closing the window does not stop Kiku: the dictation key goes on working and the tray
+icon stays. Quit from there when you want it to stop.
 
 ## Installing
 
-Kiku is not code signed, so each operating system warns you once on first launch.
+Kiku is not code signed, so Windows and macOS each warn you once on first launch, and
+macOS needs two permissions granted by hand. Linux needs neither.
 
 <details>
 <summary><b>Linux</b></summary>
 
-Download the AppImage, make it executable, and run it:
+- Install a package, or run the AppImage:
 
-```sh
-chmod +x Kiku_*_amd64.AppImage
-./Kiku_*_amd64.AppImage
-```
+  ```sh
+  sudo apt install ./Kiku_*_amd64.deb     # Debian, Ubuntu
+  sudo dnf install ./Kiku-*.x86_64.rpm    # Fedora, RHEL
 
-Or install a package:
+  chmod +x Kiku_*_amd64.AppImage && ./Kiku_*_amd64.AppImage
+  ```
 
-```sh
-sudo apt install ./Kiku_*_amd64.deb     # Debian, Ubuntu
-sudo dnf install ./Kiku-*.x86_64.rpm    # Fedora, RHEL
-```
+- Launch Kiku. Hold **Right Ctrl**, say a few words, and let go.
 
-The wildcards are so these keep working after a new version; run them from wherever
-the file was downloaded.
+No permissions to grant, and nothing to approve. Run the commands from wherever the
+file was downloaded; the wildcards keep them working after a new version.
 
 X11 only for now. Wayland needs portal based shortcuts and `uinput` for pasting, and I
 have not built that yet.
@@ -88,22 +93,39 @@ have not built that yet.
 <details>
 <summary><b>Windows</b></summary>
 
-Run the installer. SmartScreen will say "Windows protected your PC". Choose
-**More info**, then **Run anyway**.
+- Run `Kiku_*_x64-setup.exe`.
+- SmartScreen says "Windows protected your PC". Choose **More info**, then **Run
+  anyway**.
+- Launch Kiku. Hold **Right Ctrl**, say a few words, and let go - Windows asks for the
+  microphone the first time.
+
+Windows has not been tested yet; these steps may need more detail once it has been.
 
 </details>
 
 <details>
 <summary><b>macOS (Apple Silicon)</b></summary>
 
-Open the disk image and drag Kiku to Applications. The first launch is refused: open
-**System Settings > Privacy & Security**, scroll down, and choose **Open Anyway**.
+One approval and two permissions, in this order. Each is asked for once.
 
-macOS will then ask for two permissions, both under Privacy & Security:
+- Open `Kiku_*_aarch64.dmg` and drag Kiku to Applications.
+- Launch it. macOS refuses: *"Apple could not verify Kiku is free of malware."*
+- Open **System Settings > Privacy & Security**, scroll to the Security section, and
+  choose **Open Anyway** beside Kiku. Launch it again and choose **Open**.
+- Tap **Right Option twice** to start listening, say a few words, and tap again.
+  macOS asks for the **microphone**; allow it.
+- Dictate once more. Nothing is pasted yet, because Kiku still needs
+  **Accessibility** to type into other applications. Open **System Settings > Privacy
+  & Security > Accessibility**, and switch Kiku on.
+- Dictate a third time. The text now lands where your cursor is.
 
-- **Microphone**, so Kiku can hear you.
-- **Accessibility**, so Kiku can paste into other applications. Without it your
-  transcript still reaches the clipboard and you paste it yourself.
+Without Accessibility, dictation still works and the transcript goes to the clipboard -
+you just paste it yourself.
+
+**After updating**, Kiku may stop pasting and the dictation key may stop responding.
+Kiku is not notarized, so each build is a new application as far as macOS is concerned,
+and the existing Accessibility entry no longer matches it. Remove Kiku from **Privacy &
+Security > Accessibility** with the **-** button, then add it again.
 
 </details>
 
