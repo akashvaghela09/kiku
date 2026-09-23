@@ -19,15 +19,7 @@ import { ViewToolbar } from '@/features/shell/ViewToolbar';
 import { VIEW_LABELS } from '@/features/shell/views';
 import { HotkeyField } from './HotkeyField';
 import { SETTINGS_SECTIONS } from './sections';
-import {
-  DEFAULT_TOGGLE,
-  FALLBACK_HOLD,
-  FALLBACK_TOGGLE,
-  FUNCTION_HOLD,
-  FUNCTION_TOGGLE,
-  defaultHold,
-  defaultHoldLabel,
-} from './shortcuts';
+import { defaultHold, defaultHoldLabel } from './shortcuts';
 import { THEMES } from './theme';
 import { usePreferences } from './usePreferences';
 
@@ -147,26 +139,12 @@ export function SettingsView({
     [microphones],
   );
 
-  const rebind = async (which: 'hold' | 'toggle', spec: string): Promise<string | null> => {
-    const next = { ...bindings, [which]: { spec, display: spec } };
-    const result = await commands.setHotkeys(next);
+  const rebind = async (spec: string): Promise<string | null> => {
+    const result = await commands.setHotkeys({ hold: { spec, display: spec } });
     if (result.status === 'error') return result.error.message;
     onBindingsChanged();
     onNotify('Shortcut updated');
     return null;
-  };
-
-  const applyPreset = async (hold: string, toggle: string) => {
-    const result = await commands.setHotkeys({
-      hold: { spec: hold, display: hold },
-      toggle: { spec: toggle, display: toggle },
-    });
-    if (result.status === 'error') {
-      onNotify(result.error.message);
-      return;
-    }
-    onBindingsChanged();
-    onNotify('Shortcuts updated');
   };
 
   return (
@@ -182,55 +160,27 @@ export function SettingsView({
         <section id="shortcuts" className="scroll-mt-6">
           <Panel
             title="Shortcuts"
-            description={`Hold to talk, or tap ${defaultHoldLabel()} twice to keep listening hands-free.`}
+            description={`One key, two ways to use it: hold it, or tap it twice.`}
           >
             <Row
-              title="Hold to talk"
-              description={`Recording stops the moment you let go. Tap ${defaultHoldLabel()} twice instead and it keeps listening until you tap again.`}
+              title="Dictation key"
+              description={`Hold it to talk. Tap it twice and Kiku keeps listening hands-free until you tap again. It stays an ordinary modifier everywhere else, and pressing any other key while holding it cancels.`}
               trailing={
                 <HotkeyField
                   value={bindings.hold}
-                  label="hold-to-talk shortcut"
-                  onChange={(spec) => rebind('hold', spec)}
-                />
-              }
-            />
-            <Row
-              title="Toggle"
-              description="Press once to start, again to stop - the chord alternative to a double tap."
-              trailing={
-                <HotkeyField
-                  value={bindings.toggle}
-                  label="toggle shortcut"
-                  onChange={(spec) => rebind('toggle', spec)}
+                  label="dictation key"
+                  onChange={rebind}
                 />
               }
             />
             <Row
               align="start"
-              title="Presets"
-              description={`One key is easier to hold than a chord. ${defaultHoldLabel()} is watched rather than registered, so it keeps working as an ordinary modifier everywhere else - pressing any other key while holding it cancels. Use a chord instead if your keyboard has no usable right-hand modifier.`}
+              title="Preset"
+              description={`${defaultHoldLabel()} is what Kiku ships with. Any right-hand modifier works - pick whichever your keyboard has.`}
               trailing={
-                <div className="flex flex-wrap justify-end gap-1.5">
-                  <Button
-                    size="sm"
-                    onClick={() => void applyPreset(defaultHold(), DEFAULT_TOGGLE)}
-                  >
-                    {defaultHoldLabel()}
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => void applyPreset(FUNCTION_HOLD, FUNCTION_TOGGLE)}
-                  >
-                    F9 / F10
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => void applyPreset(FALLBACK_HOLD, FALLBACK_TOGGLE)}
-                  >
-                    Chord
-                  </Button>
-                </div>
+                <Button size="sm" onClick={() => void rebind(defaultHold())}>
+                  {defaultHoldLabel()}
+                </Button>
               }
             />
           </Panel>

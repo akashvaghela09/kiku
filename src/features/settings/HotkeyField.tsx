@@ -5,11 +5,11 @@ import { Button, Kbd } from '@/components/ui';
 import { commands, type Hotkey } from '@/lib/ipc';
 
 /**
- * Capture a new shortcut by pressing it.
+ * Capture the dictation key by pressing it.
  *
- * Asking someone to type "Ctrl+Shift+Space" into a text box is a worse experience than
- * letting them press the keys, and it is the only way they discover that a chord of
- * two ordinary keys is not a shortcut the system can register.
+ * Pressing the key is how you find out whether your keyboard has it - which matters,
+ * because the only keys Kiku can watch are the three right-hand modifiers, and plenty
+ * of compact keyboards are missing one or another of them.
  */
 interface HotkeyFieldProps {
   value: Hotkey;
@@ -17,17 +17,21 @@ interface HotkeyFieldProps {
   label: string;
 }
 
-/** Keys that only modify; a shortcut needs something other than these. */
-const MODIFIER_CODES = new Set([
-  'ControlLeft',
-  'ControlRight',
-  'ShiftLeft',
-  'ShiftRight',
-  'AltLeft',
-  'AltRight',
-  'MetaLeft',
-  'MetaRight',
-]);
+/**
+ * The keys that can be bound, by the code the browser reports for them.
+ *
+ * Right-hand modifiers only. A bare modifier is the one thing comfortable to *hold*,
+ * and the right-hand one is unclaimed by every platform - nothing uses Right Ctrl
+ * alone, so watching it takes nothing away.
+ */
+const BINDABLE: Record<string, string> = {
+  ControlRight: 'RightControl',
+  AltRight: 'RightAlt',
+  MetaRight: 'RightSuper',
+};
+
+/** Their left-hand twins, which are refused with an explanation rather than ignored. */
+const LEFT_HAND = new Set(['ControlLeft', 'AltLeft', 'MetaLeft', 'ShiftLeft', 'ShiftRight']);
 
 export function HotkeyField({ value, onChange, label }: HotkeyFieldProps) {
   const [capturing, setCapturing] = useState(false);
@@ -46,17 +50,20 @@ export function HotkeyField({ value, onChange, label }: HotkeyFieldProps) {
         return;
       }
 
-      // Wait for a non-modifier: the user is still assembling the chord.
-      if (MODIFIER_CODES.has(event.code)) return;
+      const spec = BINDABLE[event.code];
+      if (spec) {
+        void submit(spec);
+        return;
+      }
 
-      const parts: string[] = [];
-      if (event.ctrlKey) parts.push('Ctrl');
-      if (event.altKey) parts.push('Alt');
-      if (event.shiftKey) parts.push('Shift');
-      if (event.metaKey) parts.push('Super');
-      parts.push(event.code);
-
-      void submit(parts.join('+'));
+      // Anything else is refused where the user can see why, rather than being
+      // swallowed - a field that ignores most of the keyboard looks broken.
+      setError(
+        LEFT_HAND.has(event.code)
+          ? 'Use the right-hand key. The left one stays yours to type with.'
+          : 'Kiku listens on a right-hand modifier: Right Ctrl, Right Alt or Right Cmd.',
+      );
+      setCapturing(false);
     };
 
     window.addEventListener('keydown', onKeyDown, true);
@@ -81,7 +88,7 @@ export function HotkeyField({ value, onChange, label }: HotkeyFieldProps) {
       <div className="flex items-center gap-2">
         {capturing ? (
           <>
-            <span className="text-ui text-accent-text">Press a shortcut…</span>
+            <span className="text-ui text-accent-text">Press a right-hand modifier…</span>
             <Button
               size="sm"
               variant="ghost"

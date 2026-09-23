@@ -14,56 +14,31 @@ use tauri_specta::Event;
 
 use crate::dictation::{DictationState, Outcome};
 use crate::feedback::{self, Cue};
-use crate::hotkeys::{
-    HotkeyAction, HotkeyBindings, Interpreter, KeyWatcher, TapOutcome, Thresholds,
-};
+use crate::hotkeys::{HotkeyBindings, KeyWatcher, TapOutcome, Thresholds};
 use crate::ipc::{DictationDiscarded, DictationStateChanged, LevelMeasured, TranscriptProduced};
 use crate::output::{self, Delivery};
 use crate::overlay;
 use crate::state::AppState;
 
-/// Install the dictation hotkeys and route them into a session.
+/// Install the dictation key and route it into a session.
 ///
-/// A binding takes one of two paths depending on what it is. A chord is registered
-/// with the operating system. A bare modifier such as Right Ctrl cannot be registered
-/// by any platform, so it is watched by polling its key state instead.
+/// There is nothing to register with the operating system. The binding is always a
+/// bare modifier, which no platform accepts as a global shortcut, so it is watched by
+/// polling its key state - which is also what lets it keep working as an ordinary
+/// modifier everywhere else.
 pub fn install_hotkeys(app: &AppHandle, bindings: HotkeyBindings) -> crate::Result<()> {
-    let interpreter = std::sync::Arc::new(Interpreter::new(&bindings)?);
-
-    let registered: Vec<Shortcut> = [&bindings.hold, &bindings.toggle]
-        .iter()
-        .filter(|hotkey| hotkey.single_key().is_none())
-        .map(|hotkey| hotkey.shortcut())
-        .collect::<crate::Result<_>>()?;
-
-    if !registered.is_empty() {
-        let handler_app = app.clone();
-        let handler_interpreter = std::sync::Arc::clone(&interpreter);
-
-        app.global_shortcut()
-            .on_shortcuts(registered, move |_, shortcut: &Shortcut, event| {
-                let state: ShortcutState = event.state();
-                if let Some(action) = handler_interpreter.interpret(shortcut, state) {
-                    handle(&handler_app, action);
-                }
-            })
-            .map_err(|error| {
-                tracing::warn!(%error, "could not attach the hotkey handler");
-                crate::Error::HotkeyTaken(bindings.hold.display.clone())
-            })?;
+    if bindings.hold.single_key().is_none() {
+        return Err(crate::Error::HotkeyTaken(bindings.hold.display.clone()));
     }
 
     install_watcher(app, &bindings);
 
-    tracing::info!(
-        hold = %bindings.hold.spec,
-        toggle = %bindings.toggle.spec,
-        "dictation hotkeys installed"
-    );
+    tracing::info!(hold = %bindings.hold.spec, "dictation key installed");
+
     let state = app.state::<AppState>();
     state.hotkeys.adopt(bindings);
-    // Hotkeys are the one setting that does not go through `AppState`'s own setters,
-    // so this is where a rebinding is written out.
+    // The binding does not go through `AppState`'s own setters, so this is where a
+    // rebinding is written out.
     state.save();
     Ok(())
 }
@@ -218,34 +193,6 @@ pub fn rebind(app: &AppHandle, next: HotkeyBindings) -> crate::Result<()> {
                 tracing::error!(%rollback, "could not restore the previous hotkeys");
             }
             Err(error)
-        }
-    }
-}
-
-/// Entry point for every hotkey, from either delivery path.
-///
-/// The work is queued rather than run here: see [`on_next_turn`]. A watched single key
-/// arrives on its own thread and would be safe either way, but routing both paths
-/// through the same queue keeps their ordering identical and means there is only one
-/// rule to remember.
-fn handle(app: &AppHandle, action: HotkeyAction) {
-    tracing::debug!(?action, "hotkey action");
-    on_next_turn(app, move |app| act(app, action));
-}
-
-fn act(app: &AppHandle, action: HotkeyAction) {
-    let state = app.state::<AppState>();
-
-    match action {
-        HotkeyAction::HoldStarted => start(app),
-        HotkeyAction::HoldEnded => stop(app),
-        // One key for both edges: start when idle, stop when already listening.
-        HotkeyAction::Toggled => {
-            if state.dictation.is_listening() {
-                stop(app);
-            } else {
-                start(app);
-            }
         }
     }
 }

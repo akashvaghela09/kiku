@@ -65,7 +65,7 @@ impl Settings {
 
         Self {
             preferences: section(&value, "preferences"),
-            hotkeys: section(&value, "hotkeys"),
+            hotkeys: bindable(section(&value, "hotkeys")),
             microphone: section(&value, "microphone"),
         }
     }
@@ -85,6 +85,25 @@ impl Settings {
         std::fs::write(&staging, text)?;
         std::fs::rename(&staging, &path)
     }
+}
+
+/// Keep a stored binding only if it is still one Kiku can watch.
+///
+/// A specification is just a string on disk, so it survives a release that stops
+/// accepting it - a chord stored by an older version deserialises perfectly and then
+/// cannot be installed, which would leave the application with no dictation key at all
+/// and nothing on screen to say why. Falling back to the default is the one behaviour
+/// that always leaves a working key.
+fn bindable(stored: HotkeyBindings) -> HotkeyBindings {
+    if stored.hold.single_key().is_some() {
+        return stored;
+    }
+
+    tracing::warn!(
+        spec = %stored.hold.spec,
+        "this key can no longer be bound; using the default"
+    );
+    HotkeyBindings::default()
 }
 
 /// One section of the file, or its default if it is absent or unreadable.
@@ -160,6 +179,22 @@ mod tests {
             Some("kept"),
             "a readable one beside it survives"
         );
+    }
+
+    /// Chords were bindable until 1.2.4. One left in a settings file must not leave
+    /// the application with no dictation key.
+    #[test]
+    fn a_binding_this_version_cannot_watch_falls_back_to_the_default() {
+        let dir = temp_dir("stale-binding");
+        std::fs::write(
+            Settings::path(&dir),
+            r#"{"hotkeys": {"hold": {"spec": "Ctrl+Alt+Space", "display": "⌃⌥Space"}}}"#,
+        )
+        .unwrap();
+
+        let settings = Settings::load(&dir);
+        assert_eq!(settings.hotkeys, HotkeyBindings::default());
+        assert!(settings.hotkeys.hold.single_key().is_some());
     }
 
     #[test]

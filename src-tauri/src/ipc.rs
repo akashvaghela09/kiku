@@ -241,10 +241,10 @@ pub fn validate_hotkey(spec: String) -> CommandResult<Hotkey> {
     Ok(Hotkey::parse(&spec)?)
 }
 
-/// Register a new pair of dictation shortcuts.
+/// Rebind the dictation key.
 ///
-/// Both are validated before anything is unregistered, so a typo cannot take the
-/// working shortcuts away.
+/// Validated before anything is torn down, so a key Kiku cannot watch never takes the
+/// working one away.
 #[tauri::command]
 #[specta::specta]
 pub fn set_hotkeys(
@@ -253,14 +253,7 @@ pub fn set_hotkeys(
 ) -> CommandResult<HotkeyBindings> {
     let validated = HotkeyBindings {
         hold: Hotkey::parse(&bindings.hold.spec)?,
-        toggle: Hotkey::parse(&bindings.toggle.spec)?,
     };
-
-    if validated.hold.spec == validated.toggle.spec {
-        return Err(
-            Error::Internal("Hold and toggle need to be different shortcuts.".into()).into(),
-        );
-    }
 
     crate::runtime::rebind(&app, validated.clone())?;
     Ok(validated)

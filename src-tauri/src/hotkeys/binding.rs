@@ -1,19 +1,21 @@
-//! Hotkey specifications: parsing, validation and display.
+//! The dictation key: parsing, validation and display.
 //!
-//! A binding is stored as a portable string such as `Alt+Space`. It is parsed into the
-//! platform shortcut type when registered, and rendered differently per platform when
-//! shown - a macOS user expects `⌥Space`, not `Alt+Space`.
+//! A binding is stored as a portable string such as `RightControl`, and rendered for
+//! the platform it is shown on - a macOS user expects `Right ⌥`, not `RightAlt`.
 //!
-//! Only modifier-plus-key combinations exist here, because that is all the operating
-//! systems can register. Windows' `RegisterHotKey`, macOS' `RegisterEventHotKey` and
-//! X11's `XGrabKey` each take a modifier mask plus exactly one key; a chord of two
-//! ordinary keys has no representation and would in any case fire while typing.
-
-use std::str::FromStr;
+//! Only a bare right-hand modifier can be bound. That is the whole vocabulary, and it
+//! is a deliberate narrowing: one key carries both modes, holding it to talk and
+//! tapping it twice to keep listening, so a second binding would be a second way to do
+//! something the first key already does. Chords used to be bindable and are not any
+//! more - they cost a delivery path of their own, and every one of them was a worse
+//! version of a key you can simply hold.
+//!
+//! A key that is bound here is *watched*, never registered: no platform accepts a bare
+//! modifier as a global shortcut, and watching is what lets the key keep working as an
+//! ordinary modifier everywhere else.
 
 use serde::{Deserialize, Serialize};
 use specta::Type;
-use tauri_plugin_global_shortcut::{Code, Shortcut};
 
 use super::watcher::SingleKey;
 use crate::error::{Error, Result};
@@ -37,232 +39,96 @@ impl Hotkey {
             return Err(Error::Internal("A shortcut cannot be empty.".into()));
         }
 
-        // Single keys are watched rather than registered, so they never reach the
-        // platform's shortcut parser - which rejects bare modifiers outright.
-        if let Some(single) = SingleKey::parse(trimmed) {
-            return Ok(Self {
-                spec: trimmed.to_owned(),
-                display: single.display().to_owned(),
-            });
-        }
-
-        // Reject anything the OS could not register, with a sentence that explains the
-        // rule rather than echoing a parser error.
-        let shortcut = Shortcut::from_str(trimmed).map_err(|_| {
-            Error::Internal(format!(
-                "{trimmed} isn't a shortcut Kiku can use. Combine at least one modifier \
-                 (Ctrl, Alt, Shift or Cmd) with one other key."
-            ))
-        })?;
-
-        if shortcut.mods.is_empty() && !is_safe_without_modifier(shortcut.key) {
+        let Some(single) = SingleKey::parse(trimmed) else {
             return Err(Error::Internal(format!(
-                "{trimmed} has no modifier. A shortcut without Ctrl, Alt, Shift or Cmd \
-                 would fire while you type."
+                "{trimmed} isn't a key Kiku can use. Pick a right-hand modifier - \
+                 Right Ctrl, Right Alt or Right Cmd - and hold it to talk, or tap it \
+                 twice to keep listening."
             )));
-        }
+        };
 
         Ok(Self {
-            display: display_for(trimmed),
             spec: trimmed.to_owned(),
+            display: single.display().to_owned(),
         })
     }
 
-    /// The single key this binding watches, if it is one.
+    /// The key this binding watches.
+    ///
+    /// Always `Some` for a binding that came through [`Self::parse`]; it stays an
+    /// `Option` because a specification can also arrive from a settings file written by
+    /// something else.
     pub fn single_key(&self) -> Option<SingleKey> {
         SingleKey::parse(&self.spec)
     }
-
-    /// The registrable shortcut this binding is, if it is one.
-    pub fn shortcut(&self) -> Result<Shortcut> {
-        if self.single_key().is_some() {
-            return Err(Error::Internal(format!(
-                "{} is watched rather than registered.",
-                self.spec
-            )));
-        }
-        Shortcut::from_str(&self.spec)
-            .map_err(|_| Error::Internal(format!("{} is no longer a valid shortcut.", self.spec)))
-    }
-}
-
-/// Whether a key can be bound on its own.
-///
-/// A bare letter or digit would fire in the middle of a sentence, which is why
-/// modifiers are normally required. Function keys never appear in prose, so binding
-/// one alone is safe - and a single key is far easier to *hold* than a three-key
-/// chord, which matters for push-to-talk.
-fn is_safe_without_modifier(key: Code) -> bool {
-    matches!(
-        key,
-        Code::F1
-            | Code::F2
-            | Code::F3
-            | Code::F4
-            | Code::F5
-            | Code::F6
-            | Code::F7
-            | Code::F8
-            | Code::F9
-            | Code::F10
-            | Code::F11
-            | Code::F12
-            | Code::F13
-            | Code::F14
-            | Code::F15
-            | Code::F16
-            | Code::F17
-            | Code::F18
-            | Code::F19
-            | Code::F20
-            | Code::Pause
-            | Code::ScrollLock
-    )
-}
-
-/// Render a specification the way this platform's users expect to read it.
-#[cfg(target_os = "macos")]
-fn display_for(spec: &str) -> String {
-    spec.split('+')
-        .map(|part| match part.trim().to_ascii_lowercase().as_str() {
-            "cmd" | "command" | "super" | "meta" => "⌘",
-            "ctrl" | "control" => "⌃",
-            "alt" | "option" => "⌥",
-            "shift" => "⇧",
-            _ => part.trim(),
-        })
-        .collect::<Vec<_>>()
-        .concat()
-}
-
-#[cfg(not(target_os = "macos"))]
-fn display_for(spec: &str) -> String {
-    spec.split('+')
-        .map(|part| {
-            let part = part.trim();
-            match part.to_ascii_lowercase().as_str() {
-                "control" => "Ctrl".to_owned(),
-                "option" => "Alt".to_owned(),
-                "super" | "meta" | "cmd" | "command" => "Win".to_owned(),
-                // Title-case, so `alt+space` and `Alt+Space` render identically.
-                lowered => {
-                    let mut chars = lowered.chars();
-                    match chars.next() {
-                        Some(first) => first.to_ascii_uppercase().to_string() + chars.as_str(),
-                        None => String::new(),
-                    }
-                }
-            }
-        })
-        .collect::<Vec<_>>()
-        .join("+")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::hotkeys::defaults::{DEFAULT_HOLD, DEFAULT_TOGGLE, FALLBACK_HOLD};
+    use crate::hotkeys::defaults::DEFAULT_HOLD;
 
     #[test]
-    fn every_default_is_valid() {
-        for spec in [DEFAULT_HOLD, DEFAULT_TOGGLE, FALLBACK_HOLD] {
-            assert!(Hotkey::parse(spec).is_ok(), "{spec} should parse");
+    fn the_default_parses_and_is_watched() {
+        let hold = Hotkey::parse(DEFAULT_HOLD).unwrap();
+        assert!(hold.single_key().is_some());
+    }
+
+    #[test]
+    fn every_right_hand_modifier_can_be_bound() {
+        for spec in ["RightControl", "RightAlt", "RightSuper"] {
+            let hotkey = Hotkey::parse(spec).unwrap();
+            assert_eq!(hotkey.spec, spec);
+            assert!(hotkey.single_key().is_some(), "{spec} should be watched");
         }
     }
 
     #[test]
-    fn the_default_hold_is_a_watched_single_key() {
+    fn a_binding_is_written_for_a_person() {
         let hold = Hotkey::parse(DEFAULT_HOLD).unwrap();
-        assert!(
-            hold.single_key().is_some(),
-            "the default should be one key to hold"
-        );
-        assert!(
-            hold.shortcut().is_err(),
-            "a watched key must not be handed to the shortcut registrar"
-        );
-    }
-
-    #[test]
-    fn a_chord_is_registrable_and_not_a_watched_key() {
-        let chord = Hotkey::parse(FALLBACK_HOLD).unwrap();
-        assert!(chord.single_key().is_none());
-        assert!(chord.shortcut().is_ok());
-    }
-
-    #[test]
-    fn a_single_key_gets_a_readable_display_name() {
-        let hold = Hotkey::parse("RightControl").unwrap();
         assert!(!hold.display.is_empty());
         assert_ne!(
-            hold.display, "RightControl",
-            "it should be written for a person"
+            hold.display, hold.spec,
+            "the label should not be the specification"
         );
     }
 
+    /// Chords were bindable until 1.2.4 and are not any more. A stored one must be
+    /// refused rather than silently becoming something else.
     #[test]
-    fn a_function_key_may_be_bound_on_its_own() {
-        // The whole point of offering F9: one key is far easier to hold than three,
-        // and a function key cannot fire while typing.
-        for spec in ["F8", "F9", "F10"] {
-            assert!(Hotkey::parse(spec).is_ok(), "{spec} should be allowed");
+    fn a_chord_is_no_longer_a_binding() {
+        for spec in ["Ctrl+Alt+Space", "Ctrl+Shift+Space", "Alt+Space"] {
+            assert!(Hotkey::parse(spec).is_err(), "{spec} should be refused");
         }
     }
 
     #[test]
-    fn a_bare_letter_or_digit_is_still_rejected() {
-        for spec in ["A", "K", "1", "Space", "Enter"] {
-            assert!(
-                Hotkey::parse(spec).is_err(),
-                "{spec} should need a modifier"
-            );
+    fn an_ordinary_key_is_not_a_binding() {
+        // Holding a letter would fire mid-sentence; a function key has no second mode,
+        // since only a watched key can be tapped twice.
+        for spec in ["F9", "A", "Space", "Escape"] {
+            assert!(Hotkey::parse(spec).is_err(), "{spec} should be refused");
         }
     }
 
     #[test]
-    fn a_bare_key_is_rejected_with_an_explanation() {
-        let error = Hotkey::parse("Space").unwrap_err().to_string();
+    fn nonsense_is_refused_with_something_readable() {
+        let error = Hotkey::parse("RightPinky").unwrap_err().to_string();
         assert!(
-            error.contains("modifier"),
-            "the message should explain the rule: {error}"
+            error.contains("Right Ctrl"),
+            "the message should say what can be bound, got {error}"
         );
     }
 
     #[test]
-    fn an_empty_specification_is_rejected() {
+    fn an_empty_binding_is_refused() {
+        assert!(Hotkey::parse("").is_err());
         assert!(Hotkey::parse("   ").is_err());
     }
 
     #[test]
-    fn nonsense_is_rejected() {
-        assert!(Hotkey::parse("Alt+NotAKey").is_err());
-    }
-
-    #[test]
-    fn surrounding_whitespace_is_ignored() {
-        let hotkey = Hotkey::parse("  Alt+Space  ").unwrap();
-        assert_eq!(hotkey.spec, "Alt+Space");
-    }
-
-    #[test]
-    fn a_parsed_binding_round_trips_to_a_shortcut() {
-        assert!(Hotkey::parse(DEFAULT_TOGGLE).unwrap().shortcut().is_ok());
-    }
-
-    #[cfg(not(target_os = "macos"))]
-    #[test]
-    fn display_is_normalised_on_windows_and_linux() {
-        assert_eq!(Hotkey::parse("alt+space").unwrap().display, "Alt+Space");
-        assert_eq!(
-            Hotkey::parse("Ctrl+Alt+Space").unwrap().display,
-            "Ctrl+Alt+Space"
-        );
-    }
-
-    #[cfg(target_os = "macos")]
-    #[test]
-    fn display_uses_symbols_on_macos() {
-        assert_eq!(Hotkey::parse("Alt+Space").unwrap().display, "⌥Space");
-        assert_eq!(Hotkey::parse("Ctrl+Alt+Space").unwrap().display, "⌃⌥Space");
+    fn surrounding_space_is_ignored() {
+        let hotkey = Hotkey::parse("  RightControl  ").unwrap();
+        assert_eq!(hotkey.spec, "RightControl");
     }
 }

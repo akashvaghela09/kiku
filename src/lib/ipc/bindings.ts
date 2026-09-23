@@ -59,10 +59,10 @@ export const commands = {
 	 */
 	validateHotkey: (spec: string) => typedError<Hotkey, ErrorPayload>(__TAURI_INVOKE("validate_hotkey", { spec })),
 	/**
-	 *  Register a new pair of dictation shortcuts.
+	 *  Rebind the dictation key.
 	 * 
-	 *  Both are validated before anything is unregistered, so a typo cannot take the
-	 *  working shortcuts away.
+	 *  Validated before anything is torn down, so a key Kiku cannot watch never takes the
+	 *  working one away.
 	 */
 	setHotkeys: (bindings: HotkeyBindings) => typedError<HotkeyBindings, ErrorPayload>(__TAURI_INVOKE("set_hotkeys", { bindings })),
 	/**
@@ -208,7 +208,6 @@ export type Hotkey = {
 
 export type HotkeyBindings = {
 	hold: Hotkey,
-	toggle: Hotkey,
 };
 
 export type InstallState = 

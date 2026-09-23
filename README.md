@@ -31,40 +31,30 @@ on, once a day to ask whether a newer version exists.
 
 ## Shortcuts
 
-| Key | What happens |
-| :-- | :-- |
-| **Hold key** | Records while held. Let go and the text is pasted. |
-| **Hold key, tapped twice** | Hands free. Recording continues until you tap again. |
-| **Ctrl + Alt + Space** | Toggle, if you prefer a chord to a double tap. |
-| **Escape** | Cancel without transcribing. |
-
-The hold key is **Right Ctrl** on Windows and Linux, and **Right Option** on macOS,
-because Mac keyboards have no right Control key. Everything else is the same on all
-three.
+One key, two ways to use it.
 
 | | Hold to talk | Hands free |
 | :-- | :-- | :-- |
 | **Windows / Linux** | Hold Right Ctrl | Tap Right Ctrl twice |
 | **macOS** | Hold Right Option | Tap Right Option twice |
 
-I picked a bare modifier because one key is far easier to hold than a chord, and no
-operating system claims Right Ctrl on its own. No platform will register a lone
-modifier as a shortcut, so Kiku watches the key instead of capturing it. Right Ctrl
-therefore keeps working as Ctrl everywhere else, and **pressing any other key while
-holding cancels the recording**. That is what stops Right Ctrl + C from copying and
-dictating at the same time.
+Holding records for as long as you hold. Tapping twice keeps listening until you tap
+again, so you can dictate with both hands free. Press Escape to throw a recording away
+without transcribing it.
 
-Tapping the hold key twice is the usual way into hands-free recording, and it needs no
-chord: double-tap Right Option on a Mac, or Right Ctrl elsewhere, and Kiku keeps
-listening until you tap again. The chord is there for keyboards whose right-hand
-modifier is awkward.
+Mac keyboards have no right Control key, which is the only reason the two differ.
 
-Every shortcut can be reassigned in Settings, which also offers F9 or F10 for a single
-key, and Ctrl + Shift + Space for a chord that no platform has claimed.
+A bare modifier is deliberate: one key is far easier to *hold* than a chord, and no
+operating system claims a right-hand modifier on its own. No platform will register a
+lone modifier as a shortcut, so Kiku watches the key rather than capturing it. It
+therefore keeps working as an ordinary modifier everywhere else, and **pressing any
+other key while holding cancels the recording** - which is what stops Right Ctrl + C
+from copying and dictating at the same time.
 
-The defaults all live in
-[`src-tauri/src/hotkeys/defaults.rs`](src-tauri/src/hotkeys/defaults.rs), which is the
-only file to edit to change what a fresh install is bound to.
+Settings will bind any right-hand modifier, so pick whichever your keyboard has. The
+default lives in
+[`src-tauri/src/hotkeys/defaults.rs`](src-tauri/src/hotkeys/defaults.rs), the only file
+to edit to change what a fresh install gets.
 
 ## Installing
 
