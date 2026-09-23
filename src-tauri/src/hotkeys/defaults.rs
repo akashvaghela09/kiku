@@ -31,6 +31,13 @@ pub const DEFAULT_HOLD: &str = "RightAlt";
 #[cfg(not(target_os = "macos"))]
 pub const DEFAULT_HOLD: &str = "RightControl";
 
+/// The hands-free key, double-tapped.
+///
+/// The same key as [`DEFAULT_HOLD`] by default, because one key doing both is the
+/// simplest thing that works: hold it to talk, tap it twice to keep listening. They
+/// are separate settings so that anyone who wants a key each can have one.
+pub const DEFAULT_HANDS_FREE: &str = DEFAULT_HOLD;
+
 /// Abandon a recording in progress.
 ///
 /// Registered only while a session is running and released immediately afterwards:

@@ -27,13 +27,15 @@ use crate::state::AppState;
 /// polling its key state - which is also what lets it keep working as an ordinary
 /// modifier everywhere else.
 pub fn install_hotkeys(app: &AppHandle, bindings: HotkeyBindings) -> crate::Result<()> {
-    if bindings.hold.single_key().is_none() {
-        return Err(crate::Error::HotkeyTaken(bindings.hold.display.clone()));
+    for binding in [&bindings.hold, &bindings.hands_free] {
+        if binding.single_key().is_none() {
+            return Err(crate::Error::HotkeyTaken(binding.display.clone()));
+        }
     }
 
     install_watcher(app, &bindings);
 
-    tracing::info!(hold = %bindings.hold.spec, "dictation key installed");
+    tracing::info!(hold = %bindings.hold.spec, hands_free = %bindings.hands_free.spec, "dictation keys installed");
 
     let state = app.state::<AppState>();
     state.hotkeys.adopt(bindings);
@@ -43,23 +45,42 @@ pub fn install_hotkeys(app: &AppHandle, bindings: HotkeyBindings) -> crate::Resu
     Ok(())
 }
 
-/// Start polling a single-key binding, or stop any watcher if neither is one.
+/// Start watching whatever the bindings name.
+///
+/// One thread per distinct key. Bound to the same key, which is what a fresh install
+/// does, that is a single watcher answering to both gestures; bound to two keys, it is
+/// two watchers that each answer to one and ignore the other.
 fn install_watcher(app: &AppHandle, bindings: &HotkeyBindings) {
-    let Some(key) = bindings.hold.single_key() else {
-        app.state::<AppState>().hotkeys.watch(None);
-        return;
-    };
+    let mut watchers = Vec::new();
+    let mut started: Vec<String> = Vec::new();
 
-    let watcher_app = app.clone();
-    let watcher = KeyWatcher::start(key, Thresholds::default(), move |outcome| match outcome {
-        TapOutcome::Start => start(&watcher_app),
-        TapOutcome::Finish => stop(&watcher_app),
-        // A press too brief to be speech, or the key being used as a modifier. The
-        // audio is thrown away rather than transcribed.
-        TapOutcome::Discard => cancel(&watcher_app),
-    });
+    for binding in [&bindings.hold, &bindings.hands_free] {
+        if started.contains(&binding.spec) {
+            continue;
+        }
 
-    app.state::<AppState>().hotkeys.watch(Some(watcher));
+        let (Some(key), Some(gestures)) = (binding.single_key(), bindings.gestures_for(binding))
+        else {
+            continue;
+        };
+
+        let watcher_app = app.clone();
+        watchers.push(KeyWatcher::start(
+            key,
+            gestures,
+            Thresholds::default(),
+            move |outcome| match outcome {
+                TapOutcome::Start => start(&watcher_app),
+                TapOutcome::Finish => stop(&watcher_app),
+                // A press too brief to be speech, or the key being used as a modifier.
+                // The audio is thrown away rather than transcribed.
+                TapOutcome::Discard => cancel(&watcher_app),
+            },
+        ));
+        started.push(binding.spec.clone());
+    }
+
+    app.state::<AppState>().hotkeys.watch(watchers);
 }
 
 /// Escape, registered only while a session is running.
@@ -183,7 +204,7 @@ fn cancel(app: &AppHandle) {
 pub fn rebind(app: &AppHandle, next: HotkeyBindings) -> crate::Result<()> {
     let previous = app.state::<AppState>().hotkeys.current();
     app.global_shortcut().unregister_all().ok();
-    app.state::<AppState>().hotkeys.watch(None);
+    app.state::<AppState>().hotkeys.watch(Vec::new());
 
     match install_hotkeys(app, next) {
         Ok(()) => Ok(()),

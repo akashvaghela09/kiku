@@ -15,6 +15,11 @@ interface HotkeyFieldProps {
   value: Hotkey;
   onChange: (spec: string) => Promise<string | null>;
   label: string;
+  /**
+   * True for the hands-free key, whose refusal has an extra reason worth giving: a key
+   * Kiku cannot watch cannot be seen being tapped twice either.
+   */
+  needsDoubleTap?: boolean | undefined;
 }
 
 /**
@@ -33,7 +38,7 @@ const BINDABLE: Record<string, string> = {
 /** Their left-hand twins, which are refused with an explanation rather than ignored. */
 const LEFT_HAND = new Set(['ControlLeft', 'AltLeft', 'MetaLeft', 'ShiftLeft', 'ShiftRight']);
 
-export function HotkeyField({ value, onChange, label }: HotkeyFieldProps) {
+export function HotkeyField({ value, onChange, label, needsDoubleTap }: HotkeyFieldProps) {
   const [capturing, setCapturing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -58,10 +63,14 @@ export function HotkeyField({ value, onChange, label }: HotkeyFieldProps) {
 
       // Anything else is refused where the user can see why, rather than being
       // swallowed - a field that ignores most of the keyboard looks broken.
+      const reason = LEFT_HAND.has(event.code)
+        ? 'Use the right-hand key. The left one stays yours to type with.'
+        : 'Kiku listens on a right-hand modifier: Right Ctrl, Right Alt or Right Cmd.';
+
       setError(
-        LEFT_HAND.has(event.code)
-          ? 'Use the right-hand key. The left one stays yours to type with.'
-          : 'Kiku listens on a right-hand modifier: Right Ctrl, Right Alt or Right Cmd.',
+        needsDoubleTap
+          ? `${reason} Kiku cannot tell that any other key has been tapped twice.`
+          : reason,
       );
       setCapturing(false);
     };

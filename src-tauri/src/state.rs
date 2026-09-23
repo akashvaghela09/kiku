@@ -180,7 +180,7 @@ impl AppState {
 #[derive(Default)]
 pub struct HotkeyState {
     bindings: Mutex<Option<HotkeyBindings>>,
-    watcher: Mutex<Option<KeyWatcher>>,
+    watcher: Mutex<Vec<KeyWatcher>>,
 }
 
 impl HotkeyState {
@@ -200,10 +200,15 @@ impl HotkeyState {
     }
 
     /// Install a key watcher, stopping whichever one was running.
-    pub fn watch(&self, watcher: Option<KeyWatcher>) {
+    /// Install the watchers, stopping whichever were running.
+    ///
+    /// A list because the two modes can be bound to different keys, and each key needs
+    /// a thread of its own. Bound to the same key - which is what a fresh install does
+    /// - there is one watcher answering to both gestures.
+    pub fn watch(&self, watchers: Vec<KeyWatcher>) {
         if let Ok(mut current) = self.watcher.lock() {
-            // Dropping the previous watcher stops its thread.
-            *current = watcher;
+            // Dropping the previous watchers stops their threads.
+            *current = watchers;
         }
     }
 }

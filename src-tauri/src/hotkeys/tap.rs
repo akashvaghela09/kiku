@@ -35,6 +35,32 @@ pub const DEFAULT_HOLD_THRESHOLD: Duration = Duration::from_millis(250);
 /// shortcut stricter than the desktop it runs on feels broken rather than precise.
 pub const DEFAULT_DOUBLE_TAP_WINDOW: Duration = Duration::from_millis(500);
 
+/// Which gestures a watched key answers to.
+///
+/// One key can carry both, which is what a fresh install does. Binding them to
+/// different keys is what makes each one answer to its own gesture and ignore the
+/// other: holding the hands-free key should not record, and tapping the hold key twice
+/// should not latch, or the two bindings would each quietly do the other's job.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Gestures {
+    /// Hold to record. Tapping does nothing.
+    Hold,
+    /// Double-tap to record hands-free. Holding does nothing.
+    HandsFree,
+    /// Both, on the one key.
+    Both,
+}
+
+impl Gestures {
+    fn holds(self) -> bool {
+        matches!(self, Self::Hold | Self::Both)
+    }
+
+    fn latches(self) -> bool {
+        matches!(self, Self::HandsFree | Self::Both)
+    }
+}
+
 /// What the watcher observed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Input {
@@ -93,6 +119,7 @@ impl Default for Thresholds {
 pub struct TapMachine {
     state: State,
     thresholds: Thresholds,
+    gestures: Gestures,
 }
 
 impl Default for TapMachine {
@@ -103,9 +130,14 @@ impl Default for TapMachine {
 
 impl TapMachine {
     pub fn new(thresholds: Thresholds) -> Self {
+        Self::for_gestures(thresholds, Gestures::Both)
+    }
+
+    pub fn for_gestures(thresholds: Thresholds, gestures: Gestures) -> Self {
         Self {
             state: State::Idle,
             thresholds,
+            gestures,
         }
     }
 
@@ -116,24 +148,35 @@ impl TapMachine {
             // to be a tap is discarded below; this is what removes the hold delay.
             (State::Idle, Input::Down) => {
                 self.state = State::Holding { since: now };
-                Some(Outcome::Start)
+                // A key that only latches does not record until the second tap. Opening
+                // the microphone for the first one would mean opening it twice for a
+                // gesture the user experiences as single.
+                self.gestures.holds().then_some(Outcome::Start)
             }
 
             (State::Holding { since }, Input::Up) => {
-                if now.duration_since(since) >= self.thresholds.hold {
+                let held = now.duration_since(since);
+
+                if self.gestures.holds() && held >= self.thresholds.hold {
                     self.state = State::Idle;
-                    Some(Outcome::Finish)
-                } else {
+                    return Some(Outcome::Finish);
+                }
+
+                if self.gestures.latches() {
                     // Too brief to be speech. Keep the door open for a second tap.
                     self.state = State::AwaitingSecondTap { since: now };
-                    Some(Outcome::Discard)
+                    return self.gestures.holds().then_some(Outcome::Discard);
                 }
+
+                // Holds only: a tap is a mistap, with no second half to wait for.
+                self.state = State::Idle;
+                Some(Outcome::Discard)
             }
 
             // The cancel rule: the key is being used as a modifier, not as a hotkey.
             (State::Holding { .. }, Input::OtherKey) => {
                 self.state = State::Idle;
-                Some(Outcome::Discard)
+                self.gestures.holds().then_some(Outcome::Discard)
             }
 
             (State::AwaitingSecondTap { .. }, Input::Down) => {
@@ -189,6 +232,70 @@ mod tests {
         assert_eq!(
             machine.advance(Input::Down, Instant::now()),
             Some(Outcome::Start)
+        );
+    }
+
+    /// A key bound only to hands-free must not record while it is held, or it would be
+    /// a second hold key and the two settings would collide.
+    #[test]
+    fn a_hands_free_key_does_nothing_when_held() {
+        let mut machine = TapMachine::for_gestures(Thresholds::default(), Gestures::HandsFree);
+        let start = Instant::now();
+
+        assert_eq!(
+            machine.advance(Input::Down, start),
+            None,
+            "no recording yet"
+        );
+        assert_eq!(
+            machine.advance(Input::Up, start + Duration::from_secs(2)),
+            None,
+            "a long hold is not a gesture this key answers to"
+        );
+    }
+
+    #[test]
+    fn a_hands_free_key_latches_on_the_second_tap() {
+        let mut machine = TapMachine::for_gestures(Thresholds::default(), Gestures::HandsFree);
+        let start = Instant::now();
+
+        machine.advance(Input::Down, start);
+        machine.advance(Input::Up, start + Duration::from_millis(40));
+
+        assert_eq!(
+            machine.advance(Input::Down, start + Duration::from_millis(120)),
+            Some(Outcome::Start),
+            "the second tap starts hands-free recording"
+        );
+        assert_eq!(
+            machine.advance(Input::Down, start + Duration::from_secs(5)),
+            Some(Outcome::Finish),
+            "and a later tap ends it"
+        );
+    }
+
+    /// The mirror image: a key bound only to hold must not latch, or double-tapping it
+    /// would start a recording the user cannot see a way out of.
+    #[test]
+    fn a_hold_key_does_not_latch_on_a_double_tap() {
+        let mut machine = TapMachine::for_gestures(Thresholds::default(), Gestures::Hold);
+        let start = Instant::now();
+
+        assert_eq!(machine.advance(Input::Down, start), Some(Outcome::Start));
+        assert_eq!(
+            machine.advance(Input::Up, start + Duration::from_millis(40)),
+            Some(Outcome::Discard)
+        );
+
+        // A second tap inside the window starts an ordinary hold, not a latch.
+        assert_eq!(
+            machine.advance(Input::Down, start + Duration::from_millis(120)),
+            Some(Outcome::Start)
+        );
+        assert_eq!(
+            machine.advance(Input::Up, start + Duration::from_secs(2)),
+            Some(Outcome::Finish),
+            "releasing ends it, which a latch would not"
         );
     }
 

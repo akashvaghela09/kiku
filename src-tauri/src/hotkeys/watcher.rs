@@ -25,7 +25,7 @@ use std::time::{Duration, Instant};
 
 use device_query::{DeviceQuery, DeviceState, Keycode};
 
-use super::tap::{Input, Outcome, TapMachine, Thresholds};
+use super::tap::{Gestures, Input, Outcome, TapMachine, Thresholds};
 
 /// How often key state is sampled.
 ///
@@ -167,6 +167,7 @@ impl KeyWatcher {
     /// The callback runs on the watcher thread and must not block.
     pub fn start(
         key: SingleKey,
+        gestures: Gestures,
         thresholds: Thresholds,
         on_outcome: impl Fn(Outcome) + Send + 'static,
     ) -> Self {
@@ -175,7 +176,7 @@ impl KeyWatcher {
 
         thread::Builder::new()
             .name("kiku-keywatch".into())
-            .spawn(move || watch(key, thresholds, &worker_running, on_outcome))
+            .spawn(move || watch(key, gestures, thresholds, &worker_running, on_outcome))
             .map(|_| ())
             .unwrap_or_else(|error| tracing::error!(%error, "could not start the key watcher"));
 
@@ -236,6 +237,7 @@ fn await_device(running: &AtomicBool) -> Option<DeviceState> {
 
 fn watch(
     key: SingleKey,
+    gestures: Gestures,
     thresholds: Thresholds,
     running: &AtomicBool,
     on_outcome: impl Fn(Outcome) + Send + 'static,
@@ -243,11 +245,11 @@ fn watch(
     let Some(device) = await_device(running) else {
         return;
     };
-    let mut machine = TapMachine::new(thresholds);
+    let mut machine = TapMachine::for_gestures(thresholds, gestures);
     let mut was_down = false;
     let mut last_seen: Vec<Keycode> = Vec::new();
 
-    tracing::info!(key = key.spec(), "watching a single-key shortcut");
+    tracing::info!(key = key.spec(), ?gestures, "watching a key");
 
     while running.load(Ordering::Relaxed) {
         let pressed = device.get_keys();

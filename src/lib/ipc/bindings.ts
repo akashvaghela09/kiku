@@ -72,6 +72,16 @@ export const commands = {
 	 *  this exists at all.
 	 */
 	openUrl: (url: string) => typedError<null, ErrorPayload>(__TAURI_INVOKE("open_url", { url })),
+	/**
+	 *  Whether Kiku is registered to start with the computer.
+	 * 
+	 *  Asked of the operating system rather than remembered, because the login item can be
+	 *  removed from System Settings without Kiku ever knowing. A preference would go on
+	 *  claiming a thing that is no longer true.
+	 */
+	startsWithComputer: () => typedError<boolean, ErrorPayload>(__TAURI_INVOKE("starts_with_computer")),
+	/**  Register or remove the login item. */
+	setStartsWithComputer: (enabled: boolean) => typedError<boolean, ErrorPayload>(__TAURI_INVOKE("set_starts_with_computer", { enabled })),
 	/**  Whether Kiku is idle, listening or transcribing. */
 	dictationState: () => typedError<DictationState, ErrorPayload>(__TAURI_INVOKE("dictation_state")),
 	/**  Abandon the current recording without transcribing it. */
@@ -207,7 +217,10 @@ export type Hotkey = {
 };
 
 export type HotkeyBindings = {
+	/**  Held down to record for as long as it is held. */
 	hold: Hotkey,
+	/**  Tapped twice to record hands-free until it is tapped again. */
+	handsFree: Hotkey,
 };
 
 export type InstallState = 
