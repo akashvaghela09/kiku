@@ -123,6 +123,8 @@ fn run_capture(
     let sample_format = config.sample_format();
     let source_rate = config.sample_rate();
     let channels = config.channels();
+    #[cfg(target_os = "linux")]
+    let buffer_range = *config.buffer_size();
     let stream_config: cpal::StreamConfig = config.into();
 
     // Pre-allocate the whole ceiling once so the audio callback never triggers a
@@ -132,6 +134,20 @@ fn run_capture(
     let buffer = Arc::new(Mutex::new(Vec::<f32>::with_capacity(capacity)));
     let clipped = Arc::new(AtomicBool::new(false));
 
+    #[cfg(target_os = "linux")]
+    let stream = build_linux_stream(
+        &device,
+        stream_config,
+        &buffer_range,
+        sample_format,
+        &buffer,
+        &clipped,
+        on_level,
+    );
+
+    // macOS (CoreAudio) and Windows (WASAPI shared mode) already deliver buffers of
+    // about 10 ms by default, so they open the stream exactly as they always have.
+    #[cfg(not(target_os = "linux"))]
     let stream = build_stream(
         &device,
         stream_config,
@@ -184,6 +200,78 @@ fn run_capture(
         truncated,
         clipped: clipped.load(Ordering::Relaxed),
     })
+}
+
+/// How long one audio buffer should be on Linux.
+///
+/// Every buffer is one chance to publish a level, so this sets the ceiling on how
+/// often the waveform can move. Left to the platform, CoreAudio and WASAPI deliver
+/// about 10 ms, but ALSA - through PipeWire or PulseAudio - delivers 128 ms, which held
+/// the overlay to eight updates a second: bars that stepped rather than moved, and
+/// syllables averaged away inside a single buffer. Twenty milliseconds restores the
+/// full [`LEVEL_INTERVAL`](crate::dictation::LEVEL_INTERVAL) rate with room to spare
+/// before the audio thread risks an overrun.
+///
+/// Linux only. macOS and Windows already get short buffers by default and keep
+/// opening the stream exactly as they always have.
+#[cfg(target_os = "linux")]
+const BUFFER_DURATION: Duration = Duration::from_millis(20);
+
+/// The buffer size to ask for, in frames, or `None` to leave it to the device.
+#[cfg(target_os = "linux")]
+fn preferred_buffer_size(range: &cpal::SupportedBufferSize, sample_rate: u32) -> Option<u32> {
+    match *range {
+        cpal::SupportedBufferSize::Range { min, max } => {
+            let frames =
+                (u64::from(sample_rate) * BUFFER_DURATION.as_millis() as u64 / 1000) as u32;
+            Some(frames.clamp(min, max))
+        }
+        cpal::SupportedBufferSize::Unknown => None,
+    }
+}
+
+/// Open the stream with short buffers, falling back to the device default.
+///
+/// A device may advertise a range and still refuse a size inside it, and a refused
+/// buffer size must not cost the user their microphone. The callback is shared rather
+/// than moved so the second attempt can reuse it; the lock is uncontended.
+#[cfg(target_os = "linux")]
+fn build_linux_stream(
+    device: &cpal::Device,
+    config: cpal::StreamConfig,
+    range: &cpal::SupportedBufferSize,
+    format: SampleFormat,
+    buffer: &Arc<Mutex<Vec<f32>>>,
+    clipped: &Arc<AtomicBool>,
+    on_level: impl Fn(Level) + Send + 'static,
+) -> Result<cpal::Stream> {
+    let on_level = Arc::new(Mutex::new(on_level));
+    let open = |buffer_size| {
+        let on_level = Arc::clone(&on_level);
+        build_stream(
+            device,
+            cpal::StreamConfig {
+                buffer_size,
+                ..config
+            },
+            format,
+            Arc::clone(buffer),
+            Arc::clone(clipped),
+            move |level| {
+                if let Ok(on_level) = on_level.lock() {
+                    on_level(level);
+                }
+            },
+        )
+    };
+
+    match preferred_buffer_size(range, config.sample_rate) {
+        Some(frames) => open(cpal::BufferSize::Fixed(frames)).or_else(|error| {
+            tracing::debug!(%error, frames, "buffer size refused; using the device default");
+            open(cpal::BufferSize::Default)
+        }),
+        None => open(cpal::BufferSize::Default),
+    }
 }
 
 fn build_stream(
@@ -263,6 +351,36 @@ fn downmix(samples: &[f32], channels: u16) -> Vec<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_buffer_is_twenty_milliseconds_where_the_device_allows_it() {
+        let open = cpal::SupportedBufferSize::Range {
+            min: 64,
+            max: 1_048_576,
+        };
+        assert_eq!(preferred_buffer_size(&open, 16_000), Some(320));
+        assert_eq!(preferred_buffer_size(&open, 48_000), Some(960));
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_buffer_size_outside_the_device_range_is_clamped_into_it() {
+        let narrow = cpal::SupportedBufferSize::Range {
+            min: 1024,
+            max: 4096,
+        };
+        assert_eq!(preferred_buffer_size(&narrow, 16_000), Some(1024));
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn an_unknown_range_is_left_to_the_device() {
+        assert_eq!(
+            preferred_buffer_size(&cpal::SupportedBufferSize::Unknown, 16_000),
+            None
+        );
+    }
 
     #[test]
     fn mono_passes_through_untouched() {
