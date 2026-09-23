@@ -1,6 +1,6 @@
 [package]
 name = "kiku"
-version = "1.3.0"
+version = "1.4.0"
 edition = "2021"
 rust-version = "1.82"
 description = "Offline dictation. Hold a key, speak, and the text appears where you're typing."
