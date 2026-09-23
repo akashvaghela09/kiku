@@ -56,6 +56,7 @@ export function SettingsView({
   const [confirmClear, setConfirmClear] = useState(false);
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [busyModel, setBusyModel] = useState<string | null>(null);
+  const [startsWithComputer, setStartsWithComputer] = useState(false);
   const [downloading, setDownloading] = useState<{ done: number; total: number } | null>(null);
 
   const refreshMicrophones = useCallback(() => {
@@ -139,12 +140,51 @@ export function SettingsView({
     [microphones],
   );
 
-  const rebind = async (spec: string): Promise<string | null> => {
-    const result = await commands.setHotkeys({ hold: { spec, display: spec } });
+  // Asked of the operating system rather than remembered: a login item can be removed
+  // in System Settings without Kiku hearing about it, and a toggle that lies is worse
+  // than no toggle.
+  useEffect(() => {
+    void commands.startsWithComputer().then((result) => {
+      if (result.status === 'ok') setStartsWithComputer(result.data);
+    });
+  }, []);
+
+  const setStartup = async (next: boolean) => {
+    const result = await commands.setStartsWithComputer(next);
+    if (result.status === 'error') {
+      onNotify(result.error.message);
+      return;
+    }
+    setStartsWithComputer(result.data);
+    onNotify(result.data ? 'Kiku will start with your computer' : 'Kiku will not start itself');
+  };
+
+  const rebind = async (
+    which: 'hold' | 'handsFree',
+    spec: string,
+  ): Promise<string | null> => {
+    const next = { ...bindings, [which]: { spec, display: spec } };
+    const result = await commands.setHotkeys(next);
     if (result.status === 'error') return result.error.message;
     onBindingsChanged();
     onNotify('Shortcut updated');
     return null;
+  };
+
+  // One key doing both is the shipped arrangement, and the two rows should say so
+  // rather than looking like a coincidence.
+  const sameKey = bindings.hold.spec === bindings.handsFree.spec;
+
+  /// Put both modes back on the shipped key.
+  const applyDefaultKeys = async () => {
+    const key = { spec: defaultHold(), display: defaultHold() };
+    const result = await commands.setHotkeys({ hold: key, handsFree: key });
+    if (result.status === 'error') {
+      onNotify(result.error.message);
+      return;
+    }
+    onBindingsChanged();
+    onNotify('Shortcut updated');
   };
 
   return (
@@ -157,19 +197,35 @@ export function SettingsView({
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="app-column space-y-6 py-6">
 
-        <section id="shortcuts" className="scroll-mt-6">
+        <section id="dictation" className="scroll-mt-6 space-y-6">
           <Panel
             title="Shortcuts"
             description={`One key, two ways to use it: hold it, or tap it twice.`}
           >
             <Row
-              title="Dictation key"
-              description={`Hold it to talk. Tap it twice and Kiku keeps listening hands-free until you tap again. It stays an ordinary modifier everywhere else, and pressing any other key while holding it cancels.`}
+              title="Hold to talk"
+              description="Hold it while you speak. Let go and the text is pasted. It stays an ordinary modifier everywhere else, and pressing any other key while holding it cancels."
               trailing={
                 <HotkeyField
                   value={bindings.hold}
-                  label="dictation key"
-                  onChange={rebind}
+                  label="hold to talk key"
+                  onChange={(spec) => rebind('hold', spec)}
+                />
+              }
+            />
+            <Row
+              title="Hands free"
+              description={
+                sameKey
+                  ? 'Tap it twice and Kiku keeps listening until you tap again. The same key as above, which is all most people need - give it its own key if you would rather.'
+                  : 'Tap it twice and Kiku keeps listening until you tap again. Holding this one does nothing; that is what the key above is for.'
+              }
+              trailing={
+                <HotkeyField
+                  value={bindings.handsFree}
+                  label="hands free key"
+                  needsDoubleTap
+                  onChange={(spec) => rebind('handsFree', spec)}
                 />
               }
             />
@@ -178,15 +234,12 @@ export function SettingsView({
               title="Preset"
               description={`${defaultHoldLabel()} is what Kiku ships with. Any right-hand modifier works - pick whichever your keyboard has.`}
               trailing={
-                <Button size="sm" onClick={() => void rebind(defaultHold())}>
+                <Button size="sm" onClick={() => void applyDefaultKeys()}>
                   {defaultHoldLabel()}
                 </Button>
               }
             />
           </Panel>
-        </section>
-
-        <section id="microphone" className="scroll-mt-6">
           <Panel title="Microphone">
             <Row
               align="start"
@@ -208,9 +261,6 @@ export function SettingsView({
               }
             />
           </Panel>
-        </section>
-
-        <section id="model" className="scroll-mt-6">
           <Panel
             title="Speech model"
             description="Runs entirely on this computer. Downloaded once, then kept."
@@ -263,7 +313,7 @@ export function SettingsView({
           </Panel>
         </section>
 
-        <section id="output" className="scroll-mt-6">
+        <section id="output" className="scroll-mt-6 space-y-6">
           <Panel
             title="Output"
             description="Your transcript always goes to the clipboard. Pasting is on top of that."
@@ -293,7 +343,24 @@ export function SettingsView({
           </Panel>
         </section>
 
-        <section id="appearance" className="scroll-mt-6">
+        <section id="general" className="scroll-mt-6 space-y-6">
+          <Panel
+            title="Startup"
+            description="Kiku keeps listening while its window is closed. Quit it from the tray when you want it to stop."
+          >
+            <Row
+              title="Start with the computer"
+              description="Opens in the background at login, with no window - the dictation key simply works."
+              trailing={
+                <Toggle
+                  checked={startsWithComputer}
+                  onChange={(next) => void setStartup(next)}
+                  aria-label="Start Kiku when the computer starts"
+                />
+              }
+            />
+          </Panel>
+
           <Panel
             title="Appearance"
             description="The listening capsule stays dark in every theme, because it sits over other applications rather than over Kiku."
@@ -315,9 +382,6 @@ export function SettingsView({
               }
             />
           </Panel>
-        </section>
-
-        <section id="sounds" className="scroll-mt-6">
           <Panel title="Sounds">
             <Row
               title="Sound feedback"
@@ -349,7 +413,7 @@ export function SettingsView({
           </Panel>
         </section>
 
-        <section id="history" className="scroll-mt-6">
+        <section id="history" className="scroll-mt-6 space-y-6">
           <Panel
             title="History"
             description="Transcripts are stored as text on this computer. No audio is ever kept."
@@ -395,7 +459,7 @@ export function SettingsView({
           </Panel>
         </section>
 
-        <section id="updates" className="scroll-mt-6">
+        <section id="about" className="scroll-mt-6 space-y-6">
           <Panel
             title="Updates"
             description="Kiku never updates itself. It can check once a day whether a newer version exists and show a link."
@@ -426,9 +490,6 @@ export function SettingsView({
               />
             )}
           </Panel>
-        </section>
-
-        <section id="about" className="scroll-mt-6">
           <Panel title="About">
             <Row
               title="Kiku"

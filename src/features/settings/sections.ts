@@ -1,14 +1,4 @@
-import {
-  ClipboardCheck,
-  Palette,
-  History,
-  Info,
-  Keyboard,
-  Mic,
-  RefreshCw,
-  Volume2,
-  Waves,
-} from 'lucide-react';
+import { ClipboardCheck, History, Info, Keyboard, SlidersHorizontal } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 /**
@@ -16,6 +6,10 @@ import type { LucideIcon } from 'lucide-react';
  *
  * Shared between the view that renders them and the navigation rail that links to
  * them, so the two can never disagree about what exists.
+ *
+ * Five, each holding several panels. There were nine, one panel each, which turned a
+ * short list of settings into a long list of places to look for them - Appearance and
+ * Sounds are not two subjects, and Microphone is not a subject apart from Dictation.
  */
 export interface SettingsSection {
   id: string;
@@ -24,13 +18,9 @@ export interface SettingsSection {
 }
 
 export const SETTINGS_SECTIONS: SettingsSection[] = [
-  { id: 'shortcuts', label: 'Shortcuts', icon: Keyboard },
-  { id: 'microphone', label: 'Microphone', icon: Mic },
-  { id: 'model', label: 'Speech model', icon: Waves },
+  { id: 'dictation', label: 'Dictation', icon: Keyboard },
   { id: 'output', label: 'Output', icon: ClipboardCheck },
-  { id: 'appearance', label: 'Appearance', icon: Palette },
-  { id: 'sounds', label: 'Sounds', icon: Volume2 },
+  { id: 'general', label: 'General', icon: SlidersHorizontal },
   { id: 'history', label: 'History', icon: History },
-  { id: 'updates', label: 'Updates', icon: RefreshCw },
   { id: 'about', label: 'About', icon: Info },
 ];
