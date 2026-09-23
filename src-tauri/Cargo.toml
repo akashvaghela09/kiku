@@ -1,6 +1,6 @@
 [package]
 name = "kiku"
-version = "1.2.4"
+version = "1.3.0"
 edition = "2021"
 rust-version = "1.82"
 description = "Offline dictation. Hold a key, speak, and the text appears where you're typing."
@@ -58,6 +58,7 @@ semver = "1"
 time = { version = "0.3", features = ["formatting", "parsing"] }
 device_query = "4"
 hound = "3.5"
+tauri-plugin-autostart = "2.5.1"
 
 [features]
 # Type generation runs as a test so it cannot end up in a release binary.

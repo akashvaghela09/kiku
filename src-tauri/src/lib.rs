@@ -20,6 +20,7 @@ pub mod update;
 mod ipc;
 pub mod runtime;
 pub mod settings;
+pub mod tray;
 
 pub use error::{CommandResult, Error, ErrorPayload, Result};
 
@@ -48,6 +49,8 @@ fn specta_builder() -> Builder<tauri::Wry> {
             ipc::validate_hotkey,
             ipc::set_hotkeys,
             ipc::open_url,
+            ipc::starts_with_computer,
+            ipc::set_starts_with_computer,
             ipc::dictation_state,
             ipc::cancel_dictation,
             ipc::set_microphone,
@@ -85,6 +88,13 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        // Starting with the computer is off until asked for. `--hidden` is what makes
+        // it bearable: a dictation key that steals focus at login every morning would
+        // be worse than one you have to start yourself.
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec!["--hidden"]),
+        ))
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             builder.mount_events(app);
@@ -112,14 +122,74 @@ pub fn run() {
 
             load_model_in_background(app.handle().clone());
 
+            if let Err(error) = tray::install(app.handle()) {
+                // Not fatal, but it does mean closing the window would leave no way
+                // back, so the window is kept closable-to-quit instead.
+                tracing::warn!(%error, "the tray is unavailable");
+            }
+
             if let Some(main) = app.get_webview_window("main") {
-                main.show()?;
+                keep_running_when_closed(&main);
+                // Started by the system at login, the window stays out of the way; the
+                // tray says Kiku is there and the dictation key already works.
+                if !started_hidden() {
+                    main.show()?;
+                }
             }
 
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running Kiku");
+        .build(tauri::generate_context!())
+        .expect("error while building Kiku")
+        .run(|app, event| {
+            // Clicking the dock icon of an application with no open windows. Without
+            // this the window is gone for good: closing it hides it, macOS still shows
+            // the application as running, and the one gesture for "come back" does
+            // nothing at all.
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { .. } = event {
+                tray::reveal(app);
+            }
+
+            // Closing the last window must not end the process. The dictation key is
+            // the product; the window is where its settings live.
+            if let tauri::RunEvent::ExitRequested { api, code, .. } = &event {
+                if code.is_none() {
+                    api.prevent_exit();
+                }
+            }
+
+            let _ = (app, event);
+        });
+}
+
+/// Whether this launch should keep the window to itself.
+///
+/// Passed by the login item registered for "start with the computer", so the first
+/// thing a user sees in the morning is not a window they did not ask for.
+fn started_hidden() -> bool {
+    std::env::args().any(|argument| argument == "--hidden")
+}
+
+/// Hide the window when it is closed, rather than destroying it.
+///
+/// Kiku is a dictation key that happens to have a window, so closing that window means
+/// "I have finished with the settings", not "stop listening". Destroying it also left
+/// no way back: the process stayed alive because the overlay is still loaded, macOS
+/// went on showing the application as running, and nothing recreated the window - so
+/// the only way to get it back was to quit and launch again.
+///
+/// Quitting is the tray's Quit item, or the usual quit shortcut.
+fn keep_running_when_closed(window: &tauri::WebviewWindow) {
+    let closing = window.clone();
+    window.on_window_event(move |event| {
+        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+            api.prevent_close();
+            if let Err(error) = closing.hide() {
+                tracing::warn!(%error, "could not hide the window");
+            }
+        }
+    });
 }
 
 /// Delete history older than the user's retention setting.

@@ -253,10 +253,49 @@ pub fn set_hotkeys(
 ) -> CommandResult<HotkeyBindings> {
     let validated = HotkeyBindings {
         hold: Hotkey::parse(&bindings.hold.spec)?,
+        hands_free: Hotkey::parse(&bindings.hands_free.spec)?,
     };
 
     crate::runtime::rebind(&app, validated.clone())?;
     Ok(validated)
+}
+
+// ------------------------------------------------------------------- startup
+
+/// Whether Kiku is registered to start with the computer.
+///
+/// Asked of the operating system rather than remembered, because the login item can be
+/// removed from System Settings without Kiku ever knowing. A preference would go on
+/// claiming a thing that is no longer true.
+#[tauri::command]
+#[specta::specta]
+pub fn starts_with_computer(app: tauri::AppHandle) -> CommandResult<bool> {
+    use tauri_plugin_autostart::ManagerExt;
+    Ok(app.autolaunch().is_enabled().unwrap_or(false))
+}
+
+/// Register or remove the login item.
+#[tauri::command]
+#[specta::specta]
+pub fn set_starts_with_computer(app: tauri::AppHandle, enabled: bool) -> CommandResult<bool> {
+    use tauri_plugin_autostart::ManagerExt;
+
+    let launcher = app.autolaunch();
+    let outcome = if enabled {
+        launcher.enable()
+    } else {
+        launcher.disable()
+    };
+
+    if let Err(error) = outcome {
+        return Err(Error::Internal(format!(
+            "Kiku could not change whether it starts with your computer: {error}"
+        ))
+        .into());
+    }
+
+    // Report what the system says, not what was asked for.
+    Ok(launcher.is_enabled().unwrap_or(false))
 }
 
 /// Open a link in the user's browser.
