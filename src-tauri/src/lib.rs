@@ -84,8 +84,27 @@ pub fn run() {
 
     let builder = specta_builder();
 
-    tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init())
+    let app = tauri::Builder::default();
+
+    // One Kiku at a time. Every copy watches the dictation key, so a second one records
+    // the same speech and pastes it again: double text. Starting with the computer
+    // launches a hidden copy, and opening Kiku from the menu later was enough to get
+    // two. A second launch now shows the running window and exits instead - unless it
+    // is itself a login launch, which has nothing to show.
+    //
+    // Not macOS: opening an application that is already running brings that one
+    // forward rather than starting another, so there is nothing to guard against.
+    // Registered first, as the plugin requires, so the second copy exits before
+    // anything else starts.
+    #[cfg(not(target_os = "macos"))]
+    let app = app.plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+        tracing::info!("Kiku is already running; not starting a second copy");
+        if !args.iter().any(|argument| argument == "--hidden") {
+            tray::reveal(app);
+        }
+    }));
+
+    app.plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         // Starting with the computer is off until asked for. `--hidden` is what makes
