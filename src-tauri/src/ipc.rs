@@ -329,10 +329,14 @@ pub fn dictation_state(state: State<'_, AppState>) -> CommandResult<DictationSta
 }
 
 /// Abandon the current recording without transcribing it.
+///
+/// Through the runtime rather than straight to the session, so Escape is released and
+/// the overlay hidden exactly as when the key cancels.
 #[tauri::command]
 #[specta::specta]
-pub fn cancel_dictation(state: State<'_, AppState>) -> CommandResult<()> {
-    Ok(state.dictation.cancel()?)
+pub fn cancel_dictation(app: tauri::AppHandle) -> CommandResult<()> {
+    crate::runtime::cancel(&app);
+    Ok(())
 }
 
 /// Choose the microphone. `None` follows the system default.

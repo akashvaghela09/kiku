@@ -84,7 +84,12 @@ export const commands = {
 	setStartsWithComputer: (enabled: boolean) => typedError<boolean, ErrorPayload>(__TAURI_INVOKE("set_starts_with_computer", { enabled })),
 	/**  Whether Kiku is idle, listening or transcribing. */
 	dictationState: () => typedError<DictationState, ErrorPayload>(__TAURI_INVOKE("dictation_state")),
-	/**  Abandon the current recording without transcribing it. */
+	/**
+	 *  Abandon the current recording without transcribing it.
+	 * 
+	 *  Through the runtime rather than straight to the session, so Escape is released and
+	 *  the overlay hidden exactly as when the key cancels.
+	 */
 	cancelDictation: () => typedError<null, ErrorPayload>(__TAURI_INVOKE("cancel_dictation")),
 	/**  Choose the microphone. `None` follows the system default. */
 	setMicrophone: (deviceId: string | null) => typedError<null, ErrorPayload>(__TAURI_INVOKE("set_microphone", { deviceId })),

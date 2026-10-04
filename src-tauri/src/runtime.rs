@@ -171,13 +171,21 @@ fn grab_escape(app: &AppHandle) {
     }
 }
 
+/// Give Escape back to the rest of the system.
+///
+/// Called on every path that ends a session, whether or not a session turns out to
+/// have been running: releasing a key that is not held costs nothing, while missing a
+/// release leaves Escape dead in every other application until Kiku quits.
 fn release_escape(app: &AppHandle) {
     if let Some(escape) = escape_shortcut() {
         let _ = app.global_shortcut().unregister(escape);
     }
 }
 
-fn cancel(app: &AppHandle) {
+/// Abandon the recording in progress, if there is one.
+pub(crate) fn cancel(app: &AppHandle) {
+    release_escape(app);
+
     let state = app.state::<AppState>();
     if !state.dictation.is_listening() {
         return;
@@ -190,7 +198,6 @@ fn cancel(app: &AppHandle) {
     // Cancelling is still listening stopping, so it sounds the same. The user needs to
     // know the microphone closed; whether anything came of it is the overlay's job.
     feedback::play(Cue::Stop, state.preferences().sounds);
-    release_escape(app);
     let _ = DictationDiscarded(crate::dictation::Discarded::TooShort).emit(app);
     publish_state(app, DictationState::Idle);
     hide_overlay(app);
@@ -236,7 +243,11 @@ fn start(app: &AppHandle) {
     });
 
     match result {
-        Ok(()) => {
+        // A session is already listening, or still transcribing the last one. Nothing
+        // new began, so nothing is acquired: grabbing Escape here would leave it held
+        // with no session left to release it.
+        Ok(false) => {}
+        Ok(true) => {
             // Step by step, because every one of these can block and the symptom when
             // one does is identical from the outside: the interface stops, with no
             // indication of which call never returned. Finding that the first time
@@ -260,13 +271,14 @@ fn start(app: &AppHandle) {
 }
 
 fn stop(app: &AppHandle) {
+    release_escape(app);
+
     let state = app.state::<AppState>();
     if !state.dictation.is_listening() {
         return;
     }
 
     tracing::debug!("stopping");
-    release_escape(app);
     feedback::play(Cue::Stop, state.preferences().sounds);
     publish_state(app, DictationState::Processing);
     tracing::debug!("transcribing");

@@ -113,20 +113,24 @@ impl Dictation {
 
     /// Begin recording.
     ///
+    /// Returns whether this call opened a session. `false` means one was already
+    /// listening or still transcribing, and the caller must not treat it as a fresh
+    /// start: anything it acquires for the session would have no session to end it.
+    ///
     /// `on_level` is called at most every [`LEVEL_INTERVAL`], already throttled, so
     /// callers can forward straight to the overlay without rate-limiting again.
     pub fn start(
         &self,
         microphone: Option<String>,
         on_level: impl Fn(Level) + Send + 'static,
-    ) -> Result<()> {
+    ) -> Result<bool> {
         let mut session = self.lock()?;
 
         if !matches!(*session, Session::Idle) {
             // Not an error: a second press while already listening is a user pressing
             // twice, and the right response is to carry on recording.
             tracing::debug!("start ignored - a session is already running");
-            return Ok(());
+            return Ok(false);
         }
 
         let capture = Capture::start(microphone, throttled(on_level))?;
@@ -134,7 +138,7 @@ impl Dictation {
             capture,
             started: Instant::now(),
         };
-        Ok(())
+        Ok(true)
     }
 
     /// Stop recording and transcribe what was captured.
