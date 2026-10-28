@@ -177,9 +177,26 @@ fn grab_escape(app: &AppHandle) {
 /// have been running: releasing a key that is not held costs nothing, while missing a
 /// release leaves Escape dead in every other application until Kiku quits.
 fn release_escape(app: &AppHandle) {
-    if let Some(escape) = escape_shortcut() {
-        let _ = app.global_shortcut().unregister(escape);
-    }
+    let Some(escape) = escape_shortcut() else {
+        return;
+    };
+
+    let _ = app.global_shortcut().unregister(escape);
+
+    // On X11 the first unregister does not actually release anything yet.
+    // `global-hotkey` (0.8.0, and upstream at the time of writing) queues the
+    // `UngrabKey` requests on its x11rb connection and never flushes it, so they stay
+    // in Kiku's write buffer and the X server keeps sending Escape to Kiku, which
+    // drops it - Escape is dead everywhere else. The buffer only went out with the
+    // next dictation's grab, which takes Escape straight back, so from the first
+    // dictation on it was never released.
+    //
+    // A second unregister starts by looking up the keycode, a request that waits for
+    // a reply, and waiting for a reply flushes the queued ungrabs ahead of it. Its own
+    // ungrabs are no-ops that go out, in order, before the next grab. Remove this once
+    // `global-hotkey` flushes after ungrabbing.
+    #[cfg(target_os = "linux")]
+    let _ = app.global_shortcut().unregister(escape);
 }
 
 /// Abandon the recording in progress, if there is one.
